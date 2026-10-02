@@ -1,14 +1,34 @@
 {
   "version": 2,
   "functions": {
-    "Dockerfile.vercel": {
-      "runtime": "container"
+    "api/*.php": {
+      "runtime": "vercel-php@0.6.1"
     }
   },
   "routes": [
     {
+      "src": "/assets/(.*)",
+      "dest": "/assets/$1"
+    },
+    {
+      "src": "/admin/assets/(.*)",
+      "dest": "/admin/assets/$1"
+    },
+    {
+      "src": "/student/assets/(.*)",
+      "dest": "/student/assets/$1"
+    },
+    {
+      "src": "/faculty/assets/(.*)",
+      "dest": "/faculty/assets/$1"
+    },
+    {
+      "src": "/uploads/(.*)",
+      "dest": "/uploads/$1"
+    },
+    {
       "src": "/(.*)",
-      "dest": "/Dockerfile.vercel"
+      "dest": "/api/index.php"
     }
   ]
 }
