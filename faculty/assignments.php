@@ -229,7 +229,8 @@ include '../includes/faculty_sidebar.php';
                             <td class="text-end">
                                 <a href="view_submissions.php?id=<?= $a['id'] ?>" class="btn btn-sm btn-outline-info" title="View Submissions"><i class="fas fa-eye"></i></a>
                                 <?php if ($a['attachment_path']): ?>
-                                    <a href="../<?= htmlspecialchars($a['attachment_path']) ?>" target="_blank" class="btn btn-sm btn-outline-primary" title="View File"><i class="fas fa-download"></i></a>
+                                    <a href="serve.php?file=<?= urlencode($a['attachment_path']) ?>&action=view" target="_blank" rel="noopener noreferrer" class="btn btn-sm btn-outline-primary" title="View File"><i class="fas fa-file-alt"></i></a>
+                                    <a href="serve.php?file=<?= urlencode($a['attachment_path']) ?>&action=download" class="btn btn-sm btn-primary" title="Download File"><i class="fas fa-download"></i></a>
                                 <?php endif; ?>
                                 <form method="POST" class="d-inline">
                                     <?php csrfField(); ?>

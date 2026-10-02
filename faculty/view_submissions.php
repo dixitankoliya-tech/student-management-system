@@ -207,7 +207,10 @@ include '../includes/faculty_sidebar.php';
                                     </td>
                                     <td>
                                         <?php if ($has_submitted && $sub['attachment_path']): ?>
-                                            <a href="../<?= htmlspecialchars($sub['attachment_path']) ?>" target="_blank" class="btn btn-sm btn-outline-info rounded-pill"><i class="fas fa-download me-1"></i> View File</a>
+                                            <div class="d-flex gap-1">
+                                                <a href="serve.php?file=<?= urlencode($sub['attachment_path']) ?>&action=view" target="_blank" rel="noopener noreferrer" class="btn btn-sm btn-outline-info rounded-pill"><i class="fas fa-eye"></i> View</a>
+                                                <a href="serve.php?file=<?= urlencode($sub['attachment_path']) ?>&action=download" class="btn btn-sm btn-info text-white rounded-pill"><i class="fas fa-download"></i></a>
+                                            </div>
                                         <?php else: ?>
                                             <span class="text-muted">-</span>
                                         <?php endif; ?>

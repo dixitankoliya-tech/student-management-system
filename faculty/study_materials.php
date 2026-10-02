@@ -207,7 +207,10 @@ include '../includes/faculty_sidebar.php';
                                         </td>
                                         <td>
                                             <?php if ($m['file_path']): ?>
-                                                <a href="../<?php echo $m['file_path']; ?>" target="_blank" class="badge bg-primary text-decoration-none p-2"><i class="fas fa-download me-1"></i> File</a>
+                                                <div class="d-inline-flex gap-1">
+                                                    <a href="serve.php?file=<?php echo urlencode($m['file_path']); ?>&action=view" target="_blank" rel="noopener noreferrer" class="badge bg-primary text-decoration-none p-2"><i class="fas fa-eye me-1"></i> View</a>
+                                                    <a href="serve.php?file=<?php echo urlencode($m['file_path']); ?>&action=download" class="badge bg-secondary text-decoration-none p-2"><i class="fas fa-download me-1"></i></a>
+                                                </div>
                                             <?php endif; ?>
                                             <?php if ($m['link_url']): ?>
                                                 <a href="<?php echo htmlspecialchars($m['link_url']); ?>" target="_blank" class="badge bg-info text-decoration-none p-2"><i class="fas fa-link me-1"></i> Link</a>

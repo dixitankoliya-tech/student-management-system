@@ -211,8 +211,11 @@ include '../includes/admin_header.php';
                                     </td>
                                     <td class="px-4 py-3 text-end">
                                         <?php if ($a['attachment_path']): ?>
-                                            <a href="../<?= htmlspecialchars($a['attachment_path']) ?>" target="_blank" class="btn btn-sm btn-outline-info rounded-circle me-1" title="View Attachment">
-                                                <i class="fas fa-paperclip"></i>
+                                            <a href="serve.php?file=<?= urlencode($a['attachment_path']) ?>&action=view" target="_blank" rel="noopener noreferrer" class="btn btn-sm btn-outline-info rounded-circle me-1" title="View Attachment">
+                                                <i class="fas fa-eye"></i>
+                                            </a>
+                                            <a href="serve.php?file=<?= urlencode($a['attachment_path']) ?>&action=download" class="btn btn-sm btn-info text-white rounded-circle me-1" title="Download Attachment">
+                                                <i class="fas fa-download"></i>
                                             </a>
                                         <?php endif; ?>
                                         

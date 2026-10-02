@@ -189,7 +189,10 @@ include '../includes/student_navbar.php';
                             <i class="fas fa-paperclip text-primary me-2"></i>
                             <strong>Reference Material</strong>
                         </div>
-                        <a href="../<?php echo htmlspecialchars($assignment['attachment_path']); ?>" target="_blank" class="btn btn-sm btn-outline-primary rounded-pill px-3">Download</a>
+                        <div class="d-flex gap-2">
+                            <a href="serve.php?file=<?php echo urlencode($assignment['attachment_path']); ?>&action=view" target="_blank" rel="noopener noreferrer" class="btn btn-sm btn-outline-primary rounded-pill px-3">View</a>
+                            <a href="serve.php?file=<?php echo urlencode($assignment['attachment_path']); ?>&action=download" class="btn btn-sm btn-primary rounded-pill px-3">Download</a>
+                        </div>
                     </div>
                 <?php endif; ?>
                 
@@ -230,9 +233,14 @@ include '../includes/student_navbar.php';
                             <span class="badge bg-warning text-dark mb-2">Turned in late</span>
                         <?php endif; ?>
                         
-                        <a href="../<?php echo htmlspecialchars($submission['attachment_path']); ?>" target="_blank" class="btn btn-sm btn-light border w-100 mt-2">
-                            <i class="fas fa-file-download me-2"></i> Download My File
-                        </a>
+                        <div class="d-flex gap-2 mt-2">
+                            <a href="serve.php?file=<?php echo urlencode($submission['attachment_path']); ?>&action=view" target="_blank" rel="noopener noreferrer" class="btn btn-sm btn-light border w-50">
+                                <i class="fas fa-eye me-1"></i> View
+                            </a>
+                            <a href="serve.php?file=<?php echo urlencode($submission['attachment_path']); ?>&action=download" class="btn btn-sm btn-light border w-50">
+                                <i class="fas fa-download me-1"></i> Download
+                            </a>
+                        </div>
                     </div>
                     
                     <?php if ($submission['marks_obtained'] !== null): ?>

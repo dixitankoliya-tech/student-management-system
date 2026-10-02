@@ -105,9 +105,14 @@ include '../includes/student_navbar.php';
                     
                     <div class="card-footer bg-light border-top-0 rounded-bottom-4 py-3 text-center">
                         <?php if ($m['file_path']): ?>
-                            <a href="../<?php echo htmlspecialchars($m['file_path']); ?>" target="_blank" class="btn btn-primary btn-sm px-4 rounded-pill w-100">
-                                <i class="fas fa-download me-2"></i> Download File
-                            </a>
+                            <div class="d-flex gap-2">
+                                <a href="serve.php?file=<?php echo urlencode($m['file_path']); ?>&action=view" target="_blank" rel="noopener noreferrer" class="btn btn-outline-primary btn-sm rounded-pill w-50">
+                                    <i class="fas fa-eye me-1"></i> View
+                                </a>
+                                <a href="serve.php?file=<?php echo urlencode($m['file_path']); ?>&action=download" class="btn btn-primary btn-sm rounded-pill w-50">
+                                    <i class="fas fa-download me-1"></i> Download
+                                </a>
+                            </div>
                         <?php endif; ?>
                         <?php if ($m['link_url']): ?>
                             <a href="<?php echo htmlspecialchars($m['link_url']); ?>" target="_blank" class="btn btn-outline-primary btn-sm px-4 rounded-pill w-100 mt-2">
