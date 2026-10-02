@@ -1,0 +1,16 @@
+services:
+  - type: web
+    name: student-management-system
+    env: docker
+    plan: free
+    region: frankfurt # You can change this to oregon, ohio, singapore etc.
+    healthCheckPath: /
+    envVars:
+      - key: DB_HOST
+        value: localhost # CHANGE THIS IN DASHBOARD
+      - key: DB_USER
+        value: root # CHANGE THIS IN DASHBOARD
+      - key: DB_PASS
+        value: "" # CHANGE THIS IN DASHBOARD
+      - key: DB_NAME
+        value: student_management # CHANGE THIS IN DASHBOARD
