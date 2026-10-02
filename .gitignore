@@ -13,3 +13,8 @@ uploads/
 
 .vercel
 .env*
+
+# Local Debug & Recovery
+LOCAL_RECOVERY_BACKUP/
+LOCAL_RECOVERY_DATABASE_BACKUP/
+cookies.txt
