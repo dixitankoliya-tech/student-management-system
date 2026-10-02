@@ -24,11 +24,16 @@ if (file_exists($envFile)) {
     }
 }
 
-// Database configuration
+// Database configuration (supports both local conventions and Vercel conventions)
 define('DB_HOST', getenv('DB_HOST') !== false ? getenv('DB_HOST') : 'localhost');
-define('DB_USER', getenv('DB_USER') !== false ? getenv('DB_USER') : 'root');
-define('DB_PASS', getenv('DB_PASS') !== false ? getenv('DB_PASS') : '');
-define('DB_NAME', getenv('DB_NAME') !== false ? getenv('DB_NAME') : 'student_management');
+define('DB_PORT', getenv('DB_PORT') !== false ? getenv('DB_PORT') : '3306');
+$db_user = getenv('DB_USERNAME') !== false ? getenv('DB_USERNAME') : (getenv('DB_USER') !== false ? getenv('DB_USER') : 'root');
+define('DB_USER', $db_user);
+$db_pass = getenv('DB_PASSWORD') !== false ? getenv('DB_PASSWORD') : (getenv('DB_PASS') !== false ? getenv('DB_PASS') : '');
+define('DB_PASS', $db_pass);
+$db_name = getenv('DB_DATABASE') !== false ? getenv('DB_DATABASE') : (getenv('DB_NAME') !== false ? getenv('DB_NAME') : 'student_management');
+define('DB_NAME', $db_name);
+
 
 // Application configuration
 define('ENROLLMENT_PREFIX', getenv('ENROLLMENT_PREFIX') !== false ? getenv('ENROLLMENT_PREFIX') : '20240161301');

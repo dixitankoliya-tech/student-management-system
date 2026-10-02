@@ -21,6 +21,7 @@ if (session_status() === PHP_SESSION_NONE) {
     }
     
     session_name('SMS_FACULTY_SESSION');
+    require_once __DIR__ . '/session_handler.php';
     session_start();
 }
 
