@@ -1,0 +1,13 @@
+SMS 2.0 — MASTER SYSTEM BUG REPORT
+==================================
+
+| Bug ID | Severity | Category       | Problem | Expected | Actual | Status |
+| ------ | -------- | -------------- | ------- | -------- | ------ | ------ |
+| BUG-A1 | P1       | DATA-QUALITY   | 8031 future marks exist in the `marks` table for FY students. | `marks.semester <= students.semester` | `marks.semester > students.semester` for many FY students. | DISCOVERED |
+| BUG-A2 | P1       | NAVIGATION     | `promote_students.php` is missing from the Admin sidebar. | Admin can access the promotion workflow via UI. | File exists but is orphaned/unreachable without manually typing URL. | DISCOVERED |
+| BUG-A3 | P2       | BUSINESS-RULE  | `student/results.php` blindly fetches all marks without constraining by current semester. | Students only see results for completed/current semesters. | Students see results for future semesters if dummy data leaks them. | DISCOVERED |
+| BUG-A4 | P2       | UX             | Missing empty states for future semesters in the student marksheet view. | System indicates "Not Yet Available" for upcoming semesters. | System attempts to show whatever data exists or hides the semester completely. | DISCOVERED |
+| BUG-A5 | P3       | DATA-QUALITY   | The database uses "2024-25" as a legacy backfill, creating an unrealistic mix of dummy vs historical records. | Clean organic data or explicitly marked test data. | Massive dummy seeders distorting real historical continuity. | DISCOVERED |
+
+No Cross-Panel, SQL Injection, IDOR, or 500/404 errors were found. The PHP logic is highly robust (111 files passed Lint). 
+The remaining problems are primarily focused on the system behaving like a "database demo" with randomly generated future data, and a missing navigation link for the core "Student Promotion" module.

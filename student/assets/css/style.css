@@ -1,0 +1,379 @@
+@import url('https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&display=swap');
+
+:root {
+    --bg-color: #f4f7f6;
+    --text-color: #333;
+    --text-muted: #6c757d;
+    --sidebar-bg: #1a1e23;
+    --sidebar-text: #aeb6bf;
+    --sidebar-active: #232931;
+    --sidebar-border: #3498db;
+    --card-bg: #ffffff;
+    --card-border: rgba(0,0,0,0.05);
+    --input-bg: #ffffff;
+    --input-border: #ced4da;
+    --input-text: #495057;
+    --primary-color: #3b82f6;
+    --primary-hover: #2563eb;
+    --shadow-sm: 0 4px 6px -1px rgba(0, 0, 0, 0.05);
+    --shadow-md: 0 10px 15px -3px rgba(0, 0, 0, 0.1);
+    --glass-bg: rgba(255, 255, 255, 0.85);
+    --glass-border: rgba(255, 255, 255, 0.2);
+}
+
+[data-theme="dark"] {
+    --bg-color: #0f111a;
+    --text-color: #e2e8f0;
+    --text-muted: #94a3b8;
+    --sidebar-bg: #0b0d14;
+    --sidebar-text: #94a3b8;
+    --sidebar-active: #1e293b;
+    --sidebar-border: #3b82f6;
+    --card-bg: #1e293b;
+    --card-border: rgba(255,255,255,0.05);
+    --input-bg: #0f111a;
+    --input-border: #334155;
+    --input-text: #e2e8f0;
+    --primary-color: #3b82f6;
+    --primary-hover: #60a5fa;
+    --shadow-sm: 0 4px 6px -1px rgba(0, 0, 0, 0.3);
+    --shadow-md: 0 10px 15px -3px rgba(0, 0, 0, 0.5);
+    --glass-bg: rgba(30, 41, 59, 0.85);
+    --glass-border: rgba(255, 255, 255, 0.05);
+}
+
+body {
+    overflow-x: hidden;
+    background-color: var(--bg-color);
+    font-family: 'Outfit', sans-serif;
+    color: var(--text-color);
+    transition: background-color 0.3s ease, color 0.3s ease;
+}
+
+/* Typography Overrides */
+h1, h2, h3, h4, h5, h6, .h1, .h2, .h3, .h4, .h5, .h6 {
+    font-weight: 600;
+    letter-spacing: -0.025em;
+    color: var(--text-color);
+}
+
+p, span, div {
+    color: var(--text-color);
+}
+.text-muted {
+    color: var(--text-muted) !important;
+}
+
+/* Sidebar */
+#sidebar-wrapper {
+    min-height: 100vh;
+    width: 260px;
+    margin-left: -260px;
+    transition: margin .25s ease-out;
+    background: var(--sidebar-bg) !important;
+    box-shadow: 2px 0 5px rgba(0,0,0,0.1);
+    z-index: 1000;
+}
+
+#sidebar-wrapper .sidebar-heading {
+    padding: 1.5rem 1.25rem;
+    font-size: 1.2rem;
+    background: rgba(0,0,0,0.1);
+    border-bottom: 1px solid rgba(255,255,255,0.05) !important;
+}
+
+#sidebar-wrapper .list-group {
+    width: 260px;
+}
+
+#sidebar-wrapper .list-group-item {
+    background: transparent;
+    color: var(--sidebar-text);
+    border: none;
+    padding: 1rem 1.5rem;
+    transition: all 0.3s;
+    font-weight: 500;
+}
+
+#sidebar-wrapper .list-group-item:hover, 
+#sidebar-wrapper .list-group-item.active {
+    background: var(--sidebar-active);
+    color: #fff;
+    border-left: 4px solid var(--sidebar-border);
+}
+
+#page-content-wrapper {
+    min-width: 100vw;
+}
+
+body.sb-sidenav-toggled #wrapper #sidebar-wrapper {
+    margin-left: 0;
+}
+
+@media (min-width: 768px) {
+    #sidebar-wrapper {
+        margin-left: 0;
+    }
+    #page-content-wrapper {
+        min-width: 0;
+        width: 100%;
+    }
+    body.sb-sidenav-toggled #wrapper #sidebar-wrapper {
+        margin-left: -260px;
+    }
+}
+
+/* Professional Cards & Glassmorphism */
+.card {
+    background: var(--card-bg);
+    border: 1px solid var(--card-border);
+    border-radius: 1rem;
+    box-shadow: var(--shadow-sm);
+    transition: transform 0.2s cubic-bezier(0.4, 0, 0.2, 1), box-shadow 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.card:hover {
+    box-shadow: var(--shadow-md);
+    transform: translateY(-2px);
+}
+
+.card-header {
+    background: transparent;
+    border-bottom: 1px solid var(--card-border);
+    border-radius: 1rem 1rem 0 0 !important;
+    padding: 1.25rem 1.5rem;
+}
+
+.glass-header {
+    background: var(--glass-bg);
+    backdrop-filter: blur(10px);
+    -webkit-backdrop-filter: blur(10px);
+    border-bottom: 1px solid var(--glass-border);
+    position: sticky;
+    top: 0;
+    z-index: 1020;
+}
+
+/* Modern Buttons */
+.btn {
+    border-radius: 0.5rem;
+    font-weight: 500;
+    padding: 0.5rem 1.25rem;
+    transition: all 0.2s;
+    letter-spacing: 0.025em;
+}
+
+.btn-primary {
+    background-color: var(--primary-color);
+    border-color: var(--primary-color);
+}
+.btn-primary:hover {
+    background-color: var(--primary-hover);
+    border-color: var(--primary-hover);
+    transform: translateY(-1px);
+    box-shadow: 0 4px 12px rgba(59, 130, 246, 0.3);
+}
+
+.btn-icon {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 36px;
+    height: 36px;
+    padding: 0;
+    border-radius: 50%;
+}
+
+/* Professional Table */
+.table {
+    color: var(--text-color);
+}
+.table th {
+    font-weight: 600;
+    color: var(--text-muted);
+    border-bottom: 2px solid var(--card-border);
+    background-color: transparent;
+    text-transform: uppercase;
+    font-size: 0.75rem;
+    letter-spacing: 0.05em;
+}
+.table td {
+    vertical-align: middle;
+    border-color: var(--card-border);
+}
+.table-hover tbody tr:hover {
+    background-color: rgba(0,0,0,0.02);
+}
+[data-theme="dark"] .table-hover tbody tr:hover {
+    background-color: rgba(255,255,255,0.02);
+}
+
+/* Forms */
+.form-label {
+    font-weight: 500;
+    color: var(--text-muted);
+    font-size: 0.875rem;
+    margin-bottom: 0.25rem;
+}
+.form-control, .form-select {
+    background-color: var(--input-bg);
+    border: 1px solid var(--input-border);
+    color: var(--input-text);
+    border-radius: 0.5rem;
+    padding: 0.6rem 0.75rem;
+    transition: border-color 0.15s ease-in-out, box-shadow 0.15s ease-in-out;
+}
+.form-control:focus, .form-select:focus {
+    background-color: var(--input-bg);
+    color: var(--input-text);
+    box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.25);
+    border-color: var(--primary-color);
+}
+.form-control::placeholder {
+    color: var(--text-muted);
+    opacity: 0.6;
+}
+[data-theme="dark"] .form-control[readonly] {
+    background-color: #1e293b;
+}
+
+/* Badge Enhancements */
+.badge {
+    padding: 0.35em 0.65em;
+    font-weight: 500;
+    border-radius: 0.375rem;
+    letter-spacing: 0.025em;
+}
+
+/* Visual Analytics Bars */
+.stat-bar-container {
+    height: 8px;
+    background: var(--input-border);
+    border-radius: 4px;
+    overflow: hidden;
+    margin-top: 10px;
+}
+.stat-bar-fill {
+    height: 100%;
+    background: var(--primary-color);
+    border-radius: 4px;
+    transition: width 1s ease-out;
+}
+
+/* Custom Scrollbar */
+::-webkit-scrollbar {
+    width: 8px;
+    height: 8px;
+}
+::-webkit-scrollbar-track {
+    background: transparent;
+}
+::-webkit-scrollbar-thumb {
+    background: #cbd5e1;
+    border-radius: 4px;
+}
+[data-theme="dark"] ::-webkit-scrollbar-thumb {
+    background: #475569;
+}
+
+/* Print Styles */
+@media print {
+    #sidebar-wrapper,
+    .navbar,
+    .btn,
+    .toast-container,
+    .modal,
+    footer,
+    .no-print {
+        display: none !important;
+    }
+    #page-content-wrapper {
+        margin: 0 !important;
+        padding: 0 !important;
+        width: 100% !important;
+    }
+    body {
+        background-color: white !important;
+        color: black !important;
+    }
+    .card {
+        border: none !important;
+        box-shadow: none !important;
+    }
+    .print-only {
+        display: block !important;
+    }
+}
+.print-only {
+    display: none;
+}
+
+/* Avatar Initials */
+.avatar-initials {
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: 600;
+    font-size: 0.9rem;
+}
+
+/* Custom Purple Helper */
+.bg-purple {
+    background-color: #6f42c1 !important;
+}
+.text-purple {
+    color: #6f42c1 !important;
+}
+
+/* Alert Levels & Diagnostic Badges */
+.bg-success-subtle {
+    background-color: rgba(16, 185, 129, 0.12) !important;
+}
+.bg-warning-subtle {
+    background-color: rgba(245, 158, 11, 0.12) !important;
+}
+.bg-danger-subtle {
+    background-color: rgba(239, 68, 68, 0.12) !important;
+}
+.text-warning-emphasis {
+    color: #b45309 !important;
+}
+
+/* Dark Mode Overrides for Academic Intelligence */
+[data-theme="dark"] .bg-light {
+    background-color: #1e293b !important;
+}
+[data-theme="dark"] .text-dark {
+    color: #e2e8f0 !important;
+}
+[data-theme="dark"] .table-light {
+    background-color: #1e293b !important;
+    color: #e2e8f0 !important;
+}
+[data-theme="dark"] .table-light th {
+    background-color: #1e293b !important;
+    color: #94a3b8 !important;
+}
+[data-theme="dark"] .card-header.bg-white {
+    background-color: transparent !important;
+}
+[data-theme="dark"] .list-group-item.bg-white,
+[data-theme="dark"] .list-group-item.bg-light {
+    background-color: #1e293b !important;
+    color: #e2e8f0 !important;
+}
+[data-theme="dark"] .text-warning-emphasis {
+    color: #fbbf24 !important;
+}
+[data-theme="dark"] .border {
+    border-color: rgba(255, 255, 255, 0.1) !important;
+}
+[data-theme="dark"] .input-group-text {
+    background-color: #0f111a !important;
+    border-color: #334155 !important;
+    color: #94a3b8 !important;
+}
+

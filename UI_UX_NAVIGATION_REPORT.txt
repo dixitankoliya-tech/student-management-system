@@ -1,0 +1,16 @@
+SMS 2.0 — UI/UX NAVIGATION REPORT
+=================================
+
+1. PROBLEM: Missing "Promote Students" Link in Sidebar
+- Page: admin/students.php / admin_sidebar.php
+- Expected: A link to `promote_students.php` should exist in the sidebar or from the students page to allow admins to transition students from FY to SY or SY to TY.
+- Actual: The file exists (`admin/promote_students.php`) and is functional but completely orphaned in the UI.
+- Severity: P1 (Core Business Feature Missing from UI)
+- Recommended Fix: Add the link to the `admin_sidebar.php` under "Student Management" or as an action button in `admin/students.php`.
+
+2. PROBLEM: Empty State for Future Marksheets
+- Page: student/results.php
+- Expected: The UI should differentiate between "Result Not Yet Available" (for future/current semesters) and "No results yet" (empty system).
+- Actual: Currently, it fetches all results unconditionally. Once the fake future marks are deleted, the system needs to gracefully show empty placeholders for semesters the student has not yet completed to align with the real university lifecycle.
+- Severity: P2 (UX)
+- Recommended Fix: Add logic to `student/results.php` to display grayed-out or "Pending" sections for `semester > student.semester`.

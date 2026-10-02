@@ -1,0 +1,15 @@
+SMS 2.0 — INVALID DATA REPORT
+=============================
+
+1. PROBLEM: Future Academic Marks
+- Current Value: 8031 records
+- Example: Student 'Aanya' (Current Semester 1) has marks for Semester 2, 3, 4, 5, 6.
+- Expected Relationship: A student's marks (m.semester) must be <= student's current semester (s.semester).
+- Source Table: marks
+- Related Table: students
+- Severity: P1 (Business-rule Logic / Fake Dummy Data)
+- Recommended Action: Delete marks where `sub.semester > s.semester` or explicitly label them as invalid dummy data. Update the student seeder to respect the current academic lifecycle progression instead of randomly generating 6 semesters of data for an FY student.
+
+2. PROBLEM: Dummy Academic Years vs Current Active Year
+- The system seeds 2024-25 as legacy historical data while the Active calendar is 2026-2027.
+- Recommended Action: Maintain real organic history but clear out obviously fake seeder data from legacy years that makes it impossible to distinguish between a real graduate and a dummy account.

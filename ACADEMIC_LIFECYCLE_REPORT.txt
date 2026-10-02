@@ -1,0 +1,17 @@
+SMS 2.0 — ACADEMIC LIFECYCLE REPORT
+===================================
+
+1. Student Progression
+- Current Mechanism: The `student` table tracks the `semester` state. There is a `promote_students.php` script that transitions the state.
+- Lifecycle: FY (Sem 1, 2), SY (Sem 3, 4), TY (Sem 5, 6).
+- Defect: The seeder created a database that violates the chronological reality by giving FY students all marks up to Semester 6. 
+- Behavior Rule: FY students must only see marks for Sem 1 and 2 depending on the active academic period.
+
+2. Active Semester Transitions
+- Current Mechanism: Odd/Even semantics are dynamically queried from `academic_calendars` based on `status = 'Active'`. The `AcademicEngine` handles this perfectly.
+- Transition Boundaries: The application logic successfully pivots between Odd and Even when the calendar rolls over.
+
+3. Result Visibility
+- Current Mechanism: Results are queried based on `m.status = 'Locked'`.
+- Defect: Does not enforce a check on `student.semester >= subject.semester`.
+- Required Fix: `student/results.php` and `faculty/dashboard.php` metrics must constrain queries to ensure future semester records (even if they leak into the DB) cannot be exposed.

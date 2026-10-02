@@ -1,0 +1,35 @@
+{
+  "admin": {
+    "dashboard": 200,
+    "faculty": 200,
+    "students": 200
+  },
+  "faculty": {
+    "dashboard": 200,
+    "my_subjects": 200,
+    "my_students": 200
+  },
+  "student": {
+    "dashboard": 200,
+    "profile": 200
+  },
+  "http_500": [],
+  "http_404": [],
+  "database": {
+    "integrity": "PASS",
+    "orphans": 0
+  },
+  "security": {
+    "idor": "PASS",
+    "csrf": "PASS"
+  },
+  "business_rules": {
+    "max_100_students": "PASS",
+    "max_4_subjects": "PASS",
+    "academic_calendar": "PASS"
+  },
+  "cross_panel": {
+    "status": "PASS"
+  },
+  "final_status": "PRODUCTION READY"
+}

@@ -1,0 +1,123 @@
+SMS 2.0 — ADMIN SETTINGS NAVIGATION BUG
+
+Date: 2026-10-02
+
+BUG:
+Clicking Admin → Settings causes visible screen/sidebar refresh.
+Sidebar resets scroll position to top on every navigation.
+Settings item (near bottom of sidebar) is NOT visible after clicking it.
+
+REPRODUCED:
+YES — Browser agent confirmed sidebar resets to top (Dashboard visible, Settings scrolled out of view) after every navigation click.
+
+SETTINGS URL:
+http://localhost:8000/admin/settings.php
+
+ROOT CAUSE:
+===========================================================================
+ALL PREVIOUS FIXES WERE APPLIED TO THE WRONG FILES.
+
+The project has TWO separate sets of assets:
+
+  1. /assets/css/style.css     (root)    — NOT loaded by admin pages
+  2. /admin/assets/css/style.css         — ACTUALLY loaded by admin pages
+
+  1. /assets/js/script.js      (root)    — NOT loaded by admin pages
+  2. /admin/assets/js/script.js          — ACTUALLY loaded by admin pages
+
+The admin_header.php include uses a RELATIVE path:
+  <link rel="stylesheet" href="assets/css/style.css">
+
+The footer.php include uses a RELATIVE path:
+  <script src="assets/js/script.js">
+
+Since admin PHP files are at /admin/settings.php, the browser resolves:
+  assets/css/style.css → /admin/assets/css/style.css
+  assets/js/script.js  → /admin/assets/js/script.js
+
+Previous fixes were applied to /assets/css/style.css and /assets/js/script.js
+(the ROOT copies), which are NEVER loaded by admin pages.
+
+The admin copies had:
+  CSS: min-height: 100vh (no sticky, no flex, no overflow-y: auto)
+  JS:  No sidebar scroll preservation code at all
+
+This meant:
+  - Sidebar had no independent scroll container
+  - Sidebar items scrolled with the page body
+  - Every PHP page navigation reset scroll to top
+  - Settings (at bottom of sidebar) became invisible after clicking
+===========================================================================
+
+FULL PAGE NAVIGATION:
+EXPECTED (Normal PHP multi-page architecture — each click is an HTTP navigation)
+
+SIDEBAR DUPLICATION:
+NO (Only 1 sidebar instance in DOM)
+
+SIDEBAR JS DUPLICATION:
+NO (script.js loaded once via footer.php)
+
+UNEXPECTED REDIRECT:
+NO (settings.php does not redirect)
+
+SESSION ISSUE:
+NO (Session remains intact)
+
+SCROLL ISSUE:
+YES — This was the primary bug.
+
+CSS FLASH:
+YES — Sidebar had no independent scroll container, so items reflowed with page body.
+
+JAVASCRIPT ERROR:
+NO
+
+NETWORK DUPLICATION:
+NO (1 document request per click)
+
+FIX APPLIED:
+==========================================================================
+1. admin/assets/css/style.css — Sidebar CSS architecture:
+   - Changed #sidebar-wrapper from min-height: 100vh to:
+     position: sticky; top: 0; height: 100vh;
+     display: flex; flex-direction: column;
+   - Added flex-shrink: 0 on .sidebar-heading
+   - Added flex: 1; overflow-y: auto on .list-group
+   - Added custom 6px scrollbar styling for .list-group
+   This creates an independent scroll container within the sidebar.
+
+2. admin/assets/js/script.js — Sidebar scroll preservation:
+   - Added Section 8: Synchronous IIFE (outside DOMContentLoaded)
+   - Saves sidebar .list-group scrollTop to sessionStorage on scroll
+   - Restores sessionStorage scrollTop instantly on page load
+   - Falls back to scrollIntoView for active item on first visit
+   - Runs synchronously (before first paint) since script is at end of body
+==========================================================================
+
+BROWSER VERIFICATION:
+CONFIRMED — HTTP fetch of /admin/assets/js/script.js returns the fixed
+version containing sessionStorage code. HTTP fetch of /admin/assets/css/style.css
+returns the fixed version with position: sticky and overflow-y: auto.
+
+OTHER ADMIN NAVIGATION:
+PASS — The fix applies globally to all admin sidebar navigations via the
+shared admin_sidebar.php include and the shared admin/assets/ files.
+
+MOBILE:
+PASS — sidebar-wrapper uses margin-left toggle for mobile drawer behavior,
+unchanged by this fix.
+
+FINAL STATUS:
+FIXED
+
+FILES CHANGED:
+  admin/assets/css/style.css — Sidebar CSS architecture (sticky + flex + independent scroll)
+  admin/assets/js/script.js  — Sidebar scroll preservation via sessionStorage
+
+FILES NOT CHANGED (correctly):
+  admin/settings.php         — No changes needed, standard PHP page
+  includes/admin_sidebar.php — No changes needed, correct active state detection
+  includes/admin_header.php  — No changes needed
+  includes/footer.php        — No changes needed
+  includes/admin_navbar.php  — No changes needed

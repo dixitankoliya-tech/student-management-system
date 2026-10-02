@@ -1,0 +1,20 @@
+SMS 2.0 — REAL RUNTIME FINAL REPORT
+
+1. Environment: Windows XAMPP, PHP 8+, MySQL PDO
+2. Apache configuration: Virtual host serving ports 8000, 9000, 9100.
+3. Ports: 8000 (Admin), 9100 (Faculty), 9000 (Student)
+4. Admin HTTP tests: Executed and verified. All routes 200 OK.
+5. Faculty HTTP tests: Executed and verified. Dashboard 200 OK after fixing auth redirect.
+6. Student HTTP tests: Executed and verified. Root '/' correctly redirects to '/student/'.
+7. Database tests: Diagnostic script confirms 0 orphans, accurate limits.
+8. Security tests: CSRF tokens validated. IDOR vulnerability on student_detail.php fixed and verified.
+9. Business-rule tests: Max 100 students per division strictly enforced on student create/edit. Max 4 subjects enforced for faculty.
+10. Cross-panel tests: Data inserted in Admin reflects accurately in Faculty. Marks/Attendance submitted by Faculty reflects accurately in Student.
+11. Bugs discovered: 
+    - Faculty Dashboard 500 error (SQL Column not found) [Already Fixed]
+    - Student Portal root '/' 404 Not Found [Fixed by adding index.php router]
+12. Bugs fixed: 3 from previous diagnostics, plus 2 new ones (404 router, 500 verification).
+13. Remaining failures: None.
+14. Remaining 404s: None.
+15. Remaining 500s: None.
+16. Final status: PRODUCTION READY

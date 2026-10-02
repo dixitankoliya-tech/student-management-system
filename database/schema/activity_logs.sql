@@ -1,0 +1,7 @@
+CREATE TABLE IF NOT EXISTS activity_logs (
+    id INT(11) AUTO_INCREMENT PRIMARY KEY,
+    action VARCHAR(50) NOT NULL,
+    student_id INT(11) NULL,
+    description TEXT NOT NULL,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);

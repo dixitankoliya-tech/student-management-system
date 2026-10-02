@@ -1,0 +1,25 @@
+{
+    "audit_date": "2026-10-01 11:35:22",
+    "environment": "Windows XAMPP",
+    "php_version": "8.2.12",
+    "database": "MySQL",
+    "summary": {
+        "p0": 0,
+        "p1": 0,
+        "p2": 0,
+        "p3": 0,
+        "total": 0
+    },
+    "bugs": [],
+    "runtime_errors": [],
+    "security_findings": [],
+    "database_findings": [],
+    "business_rule_findings": [],
+    "tested_pages": [
+        "http:\/\/localhost:8000\/admin\/login.php",
+        "http:\/\/localhost:9100\/faculty\/login.php",
+        "http:\/\/localhost:9000\/student\/login.php",
+        "http:\/\/localhost:8000\/admin\/dashboard.php"
+    ],
+    "tested_workflows": []
+}

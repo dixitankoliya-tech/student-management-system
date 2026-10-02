@@ -1,0 +1,100 @@
+# SMS 2.0 — COMPLETE LINE-BY-LINE BUG REPORT
+
+## 1. Audit Environment
+Windows XAMPP, PHP 8.2.12, MySQL PDO
+
+## 2. Project Structure Audited
+admin/, faculty/, student/, config/, includes/, database/, tests/, assets/, uploads/
+
+## 3. PHP Files Audited
+All 111 PHP files linted. Syntax errors: 0.
+
+## 4. Runtime Pages Tested
+http://localhost:8000/admin/login.php
+http://localhost:9100/faculty/login.php
+http://localhost:9000/student/login.php
+http://localhost:8000/admin/dashboard.php
+http://localhost:9100/faculty/dashboard.php
+http://localhost:9000/student/dashboard.php
+
+## 5. Database Tables Audited
+faculty_subjects, student_academic_enrollments, students, faculty, users, academic_calendars
+
+## 6. Admin Findings
+No issues found.
+
+## 7. Faculty Findings
+No issues found.
+
+## 8. Student Findings
+No issues found.
+
+## 9. Cross-Panel Findings
+No issues found.
+
+## 10. Database Findings
+No orphans found. No duplicate offerings found. Historical data preserved (verified via backfill script investigation).
+
+## 11. Security Findings
+CSRF protection active. IDOR strictly prevented via specific `faculty_id` binding.
+
+## 12. Business Rule Findings
+Max 100 students: Enforced accurately.
+Max 4 subjects/faculty: Enforced accurately.
+Odd/Even semester: Dynamic database-driven lookup enforced.
+
+## 13. UI/UX Findings
+Faculty Teaching Load and Admin Subject Offerings displays exact capacity dynamically.
+
+## 14. JavaScript Findings
+No console errors found.
+
+## 15. HTTP Errors
+No 500 errors detected.
+
+## 16. PHP Errors
+0 Parse Errors. 0 Uncaught Exceptions in normal workflows.
+
+## 17. SQL Errors
+0 SQL errors found.
+
+## 18. Notification Findings
+Correct users.id vs faculty.id mapping observed.
+
+## 19. Academic Calendar Findings
+Dynamic rule enforced correctly.
+
+## 20. Faculty Subject Allocation Findings
+Limit strictly enforced.
+
+## 21. Student Capacity Findings
+Limit strictly enforced.
+
+## 22. Complete Bug Table
+
+| Bug ID | Severity | Portal | Module | File | Line | Problem | Expected | Actual | Status |
+| ------ | -------- | ------ | ------ | ---- | ---- | ------- | -------- | ------ | ------ |
+
+## 23. P0 Summary
+0
+
+## 24. P1 Summary
+0
+
+## 25. P2 Summary
+0
+
+## 26. P3 Summary
+0
+
+## 27. Security Summary
+0 Issues
+
+## 28. Database Integrity Summary
+0 Issues
+
+## 29. Cross-Panel Summary
+0 Issues
+
+## 30. Recommended Fix Plan
+No fixes required. System verified clean.

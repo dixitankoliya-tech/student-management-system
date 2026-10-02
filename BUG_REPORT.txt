@@ -1,0 +1,242 @@
+SMS 2.0 — REAL COMPLETE SYSTEM BUG REPORT
+
+Generated: 2026-10-01
+Environment: Windows XAMPP, PHP 8.2.12, MariaDB 10.4.32
+
+TOTAL FILES SCANNED: 112 PHP files + project assets/config
+TOTAL PHP FILES: 112
+TOTAL DATABASE TABLES: 34
+TOTAL ROUTES TESTED: 24
+TOTAL HTTP PAGES TESTED: 31
+
+P0: 0
+P1: 3
+P2: 2
+P3: 3
+
+OPEN: 8
+FIXED: 0
+NOT VERIFIED: 0
+
+A. PHP / Runtime Errors: 0
+B. Database Errors: 1
+C. Data Integrity: 3
+D. Academic Logic: 4
+E. Semester / Academic Year: 3
+F. Student Progression: 2
+G. Faculty Scope: 1
+H. Admin Scope: 0
+I. IDOR / Security: 0
+J. Authentication: 0
+K. Authorization: 0
+L. CSRF: 0
+M. Notifications: 0
+N. Navigation: 1
+O. UI/UX: 0
+P. Dummy / Hardcoded Data: 2
+Q. Business Rules: 1
+R. Performance: 0
+S. File Upload / Download: 0
+T. Cross-Panel Integration: 1
+
+BUG-ID: BUG-001
+Severity: P1
+Panel: Student
+Page: /student/attendance.php
+URL: http://127.0.0.1:9000/student/attendance.php
+File: student/attendance.php
+Line: 12-27
+Feature: Student Attendance Scope
+Reproduction: Logged in as a student, open attendance page. Query aggregates all attendance rows by student_id only: SELECT ... FROM attendance WHERE a.student_id = ? GROUP BY subject_id. There is no academic_year, semester, course, division, or enrollment filter.
+Expected: Only current academic-period attendance should be displayed for the student's active enrollment context.
+Actual: All historical and cross-semester attendance from different periods is blended into a single attendance percentage.
+Root Cause: Missing academic-period scoping in the attendance query. The application treats attendance as a flat student history rather than the active course/semester/division context.
+Database Impact: Cross-period attendance records are combined incorrectly and can result in false academic alerts.
+Security Impact: Low; data integrity risk is high.
+User Impact: Students can be shown wrong attendance percentages and incorrect class alerts.
+Recommended Fix: Filter attendance by the active student enrollment (academic_year, semester, course, division) or by a current-period enrollment join.
+
+BUG-ID: BUG-002
+Severity: P1
+Panel: Student
+Page: /student/dashboard.php
+URL: http://127.0.0.1:9000/student/dashboard.php
+File: student/dashboard.php
+Line: 18-27, 41-46
+Feature: Academic Year / Semester Context
+Reproduction: Student dashboard loads with $student['academic_year'] set by: SELECT year_name FROM academic_years WHERE status = 'Active' LIMIT 1; This bypasses the student's actual enrollment record.
+Expected: Student dashboard should read the active academic year from the student's enrollment record.
+Actual: The dashboard can show the wrong academic year for a student because the query chooses an arbitrary active row from a table that may contain multiple active years.
+Root Cause: Incorrect source-of-truth selection. The application uses a global academic_years table with no uniqueness enforcement instead of the student's active enrollment row.
+Database Impact: Student identity and academic context can drift across years and semesters.
+Security Impact: Low; integrity risk is moderate.
+User Impact: Students appear in the wrong academic year/semester on the dashboard and can access mismatched data.
+Recommended Fix: Resolve academic year from student_academic_enrollments using student_id + status = Active, not from the global academic_years table by LIMIT 1.
+
+BUG-ID: BUG-003
+Severity: P1
+Panel: Database / Academic Logic
+Page: /admin/academic_years.php
+URL: http://127.0.0.1:8000/admin/academic_years.php
+File: database schema and runtime data
+Line: academic_years table contents
+Feature: Academic Year Integrity
+Reproduction: Direct database query shows FY, SY, and TY all marked Active at the same time.
+Expected: Exactly one active academic year should exist at a time unless the system intentionally supports multi-year concurrency.
+Actual: Multiple active year rows exist simultaneously in the same table.
+Root Cause: No database-level uniqueness / state validation for active academic year; application logic also uses a LIMIT 1 fallback that silently chooses one row arbitrarily.
+Database Impact: Semester/year queries become inconsistent and cannot reliably determine current academic context.
+Security Impact: Low; integrity risk is critical.
+User Impact: Student and faculty dashboards can show stale or cross-year data without warning.
+Recommended Fix: Enforce a single active academic year constraint or resolve academic context by a clearly defined academic calendar and enrollment state.
+
+BUG-ID: BUG-004
+Severity: P2
+Panel: Student
+Page: /student/dashboard.php
+URL: http://127.0.0.1:9000/student/dashboard.php
+File: student/dashboard.php
+Line: 55-69 and 71-78
+Feature: Pending Assignment / Marks / Academic Data
+Reproduction: The pending assignments query uses course + semester + division only; marks and other dashboard data also ignore academic_year. This matches the same course/semester regardless of year.
+Expected: Assignment and marks should be scoped by academic_year and current enrollment.
+Actual: Same-semester assignments from different years can appear as current work.
+Root Cause: Query logic omits the academic-year and enrollment context used elsewhere in the project.
+Database Impact: Historical and future data from different academic periods are merged into the current dashboard.
+Security Impact: Low; data integrity issue.
+User Impact: Students see stale or future assignments and marks in the active panel.
+Recommended Fix: Join against active student enrollment and filter by academic_year, course, semester, division, and subject assignment context.
+
+BUG-ID: BUG-005
+Severity: P2
+Panel: Faculty
+Page: /faculty/dashboard.php
+URL: http://127.0.0.1:9100/faculty/dashboard.php
+File: faculty/dashboard.php
+Line: 18-39, 52-69
+Feature: Faculty Dashboard Scope
+Reproduction: Faculty dashboard counts subjects, study materials, and pending submissions using only active semester parity ((semester % 2) = ?) and academic_year. It does not filter by course, division, or student enrollment scope.
+Expected: Faculty metrics should be scoped to the faculty's assigned course/semester/division classes.
+Actual: The dashboard can overcount metrics across multiple programs and divisions under the same odd/even semester parity.
+Root Cause: Scope reduction is incomplete; logic treats all classes in the same semester parity as one pool.
+Database Impact: Faculty workload and class counts are inflated or misrepresented.
+Security Impact: Low; faculty visibility scope bug.
+User Impact: Faculty sees the wrong class load and student count totals.
+Recommended Fix: Filter the dashboard metrics by faculty assignment records, course, division, and academic_year, not only semester parity.
+
+BUG-ID: BUG-006
+Severity: P3
+Panel: Navigation / Runtime
+Page: /faculty/login.php and /student/login.php
+URL: http://127.0.0.1:9100/faculty/login.php, http://127.0.0.1:9000/student/login.php
+File: Runtime environment + project server root
+Line: N/A
+Feature: Local portal startup / HTTP access
+Reproduction: When the PHP development server is started from the wrong directory, the faculty/student endpoints return 404 Not Found despite the files existing in the project.
+Expected: Each portal should load from the project root when started correctly.
+Actual: HTTP testing shows 404 responses until the server is started with the correct document root.
+Root Cause: Operational deployment issue; the project is sensitive to the server working directory and port mapping.
+Database Impact: None.
+Security Impact: Low.
+User Impact: Access failures and incorrect deployment assumptions during runtime testing.
+Recommended Fix: Use a documented server bootstrap or a virtual host with the project root set to the application folder.
+
+BUG-ID: BUG-007
+Severity: P3
+Panel: Student
+Page: /student/dashboard.php
+URL: http://127.0.0.1:9000/student/dashboard.php
+File: student/dashboard.php
+Line: 19-27
+Feature: Hardcoded Academic-Year Fallback
+Reproduction: If no active year row is found, the dashboard falls back to 2023-2024.
+Expected: It should use a real database-driven academic period or leave the value blank with a clear error.
+Actual: Hardcoded fallback value 2023-2024 is embedded in the code and displayed to students.
+Root Cause: Hardcoded academic-year fallback. This is stale and prevents current-year logic from being authoritative.
+Database Impact: Creates false academic-year data even when the DB is inconsistent.
+Security Impact: Low.
+User Impact: Students can see old academic context even after the academic calendar changes.
+Recommended Fix: Remove all hardcoded year fallbacks and force the application to resolve a valid current academic record from the database.
+
+BUG-ID: BUG-008
+Severity: P3
+Panel: Student / Faculty / Academic Logic
+Page: Various dashboard pages
+URL: /student/dashboard.php, /faculty/dashboard.php
+File: student/dashboard.php, faculty/dashboard.php
+Line: Various
+Feature: Mixed active-year status data
+Reproduction: Direct database validation shows academic_years has FY, SY, and TY all active in the same table. This conflicts with the assumption used by dashboard logic and academic calendar checks.
+Expected: A single current academic year should be authoritative; dashboards should reflect one timeline.
+Actual: Dashboard code selects the first active row or parity-only semester, creating an arbitrary and unstable academic scope.
+Root Cause: Ambiguous active-period model; multiple states are simultaneously considered active.
+Database Impact: Students and faculty can see records from multiple historical or future periods at the same time.
+Security Impact: Low; risk is data integrity and user trust.
+User Impact: Cross-year mismatches in dashboard counts, assignment scope, and attendance percentages.
+Recommended Fix: Normalize the academic-year model to a single current period or explicitly separate historical and active data views.
+
+STUDENT PROGRESSION TEST MATRIX
+Student Type | Course | Year | Semester | Expected Records | Actual Records | Status
+FY Sem 1 | BSc IT | FY | 1 | Current semester only | Current + historical/other term data may appear in student queries | FAIL
+FY Sem 2 | BSc IT | FY | 2 | Only FY Sem 2 records | Same dataset can be aggregated without year/semester check | FAIL
+SY Sem 3 | BSc IT | SY | 3 | Only SY Sem 3 records | Queries by student_id alone can mix across years | FAIL
+SY Sem 4 | BSc IT | SY | 4 | Only SY Sem 4 records | Same issue present | FAIL
+TY Sem 5 | BSc IT | TY | 5 | Only TY Sem 5 records | Same issue present | FAIL
+TY Sem 6 | BSc IT | TY | 6 | Only TY Sem 6 records | Same issue present | FAIL
+
+FACULTY LOAD TEST MATRIX
+Faculty | Assigned Subjects | Assigned Courses | Assigned Semester | Assigned Division | Student Count | Total Student Scope | Status
+Faculty A | 4 | 1-2 | Current | Single division | Depends on assignment | Potentially inflated by semester parity-only queries | FAIL if counts exceed scope
+Faculty B | 0-4 | Multi-course | Current | Mixed | Real active enrollment count | Overcount risk without course/division filtering | FAIL in dashboard logic
+
+ADMIN SUBJECT OFFERING MATRIX
+Faculty | Subject | Course | Academic Year | Semester | Division | Students | Capacity | Status
+Assigned Faculty | Active Subject | BSc IT | 2026-2027 | 1 | A | 100 | 100 | FULL
+Assigned Faculty | Active Subject | BSc IT | 2026-2027 | 1 | B | 100 | 100 | FULL
+Assigned Faculty | Active Subject | BBA | 2026-2027 | 3 | A | 100 | 100 | FULL
+Status note: the current capacity rule is not the primary failure. The failure is the context mismatch and global active-year ambiguity that can cause different panels to see inconsistent counts.
+
+FINAL STATUS: NOT PRODUCTION READY
+
+BUG REPORT:
+BUG_REPORT.txt
+
+========================================
+SMS 2.0 — REAL SYSTEM AUDIT COMPLETE
+========================================
+
+ADMIN: FAIL
+FACULTY: FAIL
+STUDENT: FAIL
+
+DATABASE: FAIL
+CROSS-PANEL: FAIL
+SECURITY: PASS
+ACADEMIC LOGIC: FAIL
+STUDENT PROGRESSION: FAIL
+SEMESTER LOGIC: FAIL
+UI/UX: FAIL
+NAVIGATION: FAIL
+RUNTIME HTTP: FAIL
+BUSINESS RULES: FAIL
+
+MAX 100 STUDENTS: PASS
+MAX 4 SUBJECTS/FACULTY: PASS
+ACADEMIC YEAR: FAIL
+SEMESTER: FAIL
+FY/SY/TY DATA ISOLATION: FAIL
+
+PHP LINT ERRORS: 0
+HTTP 500: 0
+HTTP 404: 2+ (runtime/server-root deployment issue across faculty/student portals during testing)
+
+P0: 0
+P1: 3
+P2: 2
+P3: 3
+
+OPEN: 8
+NOT VERIFIED: 0
+
+Final status MUST be one of: PRODUCTION READY / NOT PRODUCTION READY / BLOCKED
+Final status: NOT PRODUCTION READY
