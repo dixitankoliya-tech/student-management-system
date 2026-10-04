@@ -15,8 +15,8 @@ if (session_status() === PHP_SESSION_NONE) {
     ini_set('session.cookie_httponly', 1);
     ini_set('session.cookie_samesite', 'Lax');
     ini_set('session.gc_maxlifetime', 7200); // 2 hours
-    // Enable secure cookies when served over HTTPS
-    if (isset($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off') {
+    // Enable secure cookies when served over HTTPS (including Vercel/proxies)
+    if ((isset($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off') || (isset($_SERVER['HTTP_X_FORWARDED_PROTO']) && $_SERVER['HTTP_X_FORWARDED_PROTO'] === 'https')) {
         ini_set('session.cookie_secure', 1);
     }
     

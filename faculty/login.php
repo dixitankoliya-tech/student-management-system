@@ -411,3 +411,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['login'])) {
     </script>
 </body>
 </html>
+<?php 
+// Explicitly write session before output is fully flushed and lambda freezes
+session_write_close(); 
+?>
