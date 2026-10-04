@@ -24,8 +24,21 @@ if (file_exists($envFile)) {
     }
 }
 
+// Application configuration
+define('APP_ENV', getenv('APP_ENV') !== false ? getenv('APP_ENV') : 'production');
+define('APP_DEBUG', filter_var(getenv('APP_DEBUG'), FILTER_VALIDATE_BOOLEAN));
+define('ENROLLMENT_PREFIX', getenv('ENROLLMENT_PREFIX') !== false ? getenv('ENROLLMENT_PREFIX') : '20240161301');
+
 // Database configuration (supports both local conventions and Vercel conventions)
-define('DB_HOST', getenv('DB_HOST') !== false ? getenv('DB_HOST') : 'localhost');
+$dbHostEnv = getenv('DB_HOST');
+if (empty($dbHostEnv)) {
+    if (APP_ENV === 'production') {
+        die("ERROR: Production environment is missing required DB_HOST configuration.");
+    }
+    $dbHostEnv = 'localhost'; // Explicit safe fallback for local development only
+}
+define('DB_HOST', $dbHostEnv);
+
 define('DB_PORT', getenv('DB_PORT') !== false ? getenv('DB_PORT') : '3306');
 $db_user = getenv('DB_USERNAME') !== false ? getenv('DB_USERNAME') : (getenv('DB_USER') !== false ? getenv('DB_USER') : 'root');
 define('DB_USER', $db_user);
@@ -33,12 +46,6 @@ $db_pass = getenv('DB_PASSWORD') !== false ? getenv('DB_PASSWORD') : (getenv('DB
 define('DB_PASS', $db_pass);
 $db_name = getenv('DB_DATABASE') !== false ? getenv('DB_DATABASE') : (getenv('DB_NAME') !== false ? getenv('DB_NAME') : 'student_management');
 define('DB_NAME', $db_name);
-
-
-// Application configuration
-define('ENROLLMENT_PREFIX', getenv('ENROLLMENT_PREFIX') !== false ? getenv('ENROLLMENT_PREFIX') : '20240161301');
-define('APP_ENV', getenv('APP_ENV') !== false ? getenv('APP_ENV') : 'production');
-define('APP_DEBUG', filter_var(getenv('APP_DEBUG'), FILTER_VALIDATE_BOOLEAN));
 
 // Attempt to connect to MySQL database using PDO
 try {

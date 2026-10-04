@@ -11,52 +11,53 @@ $faculty_id = $_SESSION['faculty_db_id'];
 $filter_subject_id = isset($_GET['subject_id']) ? (int)$_GET['subject_id'] : null;
 $filter_division = isset($_GET['division']) ? $_GET['division'] : null;
 
-// Validate that the requested subject/division belongs to this faculty
+require_once '../includes/faculty_role_helper.php';
+
+// Validate that the requested subject/division belongs to this faculty (or is accessible by their role)
 if ($filter_subject_id) {
-    $stmt = $pdo->prepare("SELECT 1 FROM faculty_subjects WHERE faculty_id = ? AND subject_id = ? " . ($filter_division ? "AND division = ?" : ""));
-    $params = [$faculty_id, $filter_subject_id];
-    if ($filter_division) $params[] = $filter_division;
-    $stmt->execute($params);
-    if (!$stmt->fetch()) {
+    // If they are dean/coordinator, we might need a broader check, but for now let's allow it 
+    // if the subject is part of their accessible courses.
+    $stmt = $pdo->prepare("SELECT course_id FROM subjects WHERE id = ?");
+    $stmt->execute([$filter_subject_id]);
+    $subj_course_id = $stmt->fetchColumn();
+    
+    if (!hasCourseAccess($pdo, $faculty_id, $subj_course_id)) {
         die("Unauthorized access to this subject's students.");
     }
 }
 
 // Fetch students
 try {
-    // The query logic: Get distinct students who belong to a course/year/division that is assigned to this faculty
-    if ($filter_subject_id) {
-        // When filtering by subject, include subject info
-        $query = "
-            SELECT st.*, fs.subject_id, s.subject_name, sae.division as active_division, sae.academic_year
-            FROM students st
-            JOIN student_academic_enrollments sae ON st.id = sae.student_id AND sae.status = 'Active'
-            JOIN faculty_subjects fs ON 
-                sae.course = fs.course AND 
-                sae.semester = fs.semester AND 
-                sae.division = fs.division AND
-                sae.academic_year = fs.academic_year
-            JOIN subjects s ON fs.subject_id = s.id
-            WHERE fs.faculty_id = :faculty_id
-        ";
+    $accessible_student_ids = getAccessibleStudentIds($pdo, $faculty_id);
+    if (empty($accessible_student_ids)) {
+        $students = [];
     } else {
-        // When showing all students, deduplicate properly
-        $query = "
-            SELECT DISTINCT st.*, NULL as subject_id, NULL as subject_name, sae.division as active_division, sae.academic_year 
-            FROM students st
-            JOIN student_academic_enrollments sae ON st.id = sae.student_id AND sae.status = 'Active'
-            WHERE EXISTS (
-                SELECT 1 FROM faculty_subjects fs 
-                WHERE fs.faculty_id = :faculty_id 
-                AND sae.course = fs.course 
-                AND sae.semester = fs.semester 
-                AND sae.division = fs.division
-                AND sae.academic_year = fs.academic_year
-            )
-        ";
-    }
-    
-    $params = [':faculty_id' => $faculty_id];
+        if ($filter_subject_id) {
+            // When filtering by subject, include subject info
+            $query = "
+                SELECT st.*, fs.subject_id, s.subject_name, sae.division as active_division, sae.academic_year
+                FROM students st
+                JOIN student_academic_enrollments sae ON st.id = sae.student_id AND sae.status = 'Active'
+                JOIN faculty_subjects fs ON 
+                    sae.course = fs.course AND 
+                    sae.semester = fs.semester AND 
+                    sae.division = fs.division AND
+                    sae.academic_year = fs.academic_year
+                JOIN subjects s ON fs.subject_id = s.id
+                WHERE fs.subject_id = :subject_id 
+                AND st.id IN (" . implode(',', $accessible_student_ids) . ")
+            ";
+        } else {
+            // When showing all students, use the accessible IDs list
+            $query = "
+                SELECT st.*, NULL as subject_id, NULL as subject_name, sae.division as active_division, sae.academic_year 
+                FROM students st
+                JOIN student_academic_enrollments sae ON st.id = sae.student_id AND sae.status = 'Active'
+                WHERE st.id IN (" . implode(',', $accessible_student_ids) . ")
+            ";
+        }
+        
+        $params = [];
     
     if ($filter_subject_id) {
         $query .= " AND fs.subject_id = :subject_id";
@@ -77,6 +78,7 @@ try {
     $stmt = $pdo->prepare($query);
     $stmt->execute($params);
     $students = $stmt->fetchAll();
+    }
 } catch (PDOException $e) {
     $students = [];
 }

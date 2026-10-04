@@ -1,5 +1,6 @@
 <?php
 $current_page = basename($_SERVER['PHP_SELF']);
+$_faculty_role = $_SESSION['faculty_role'] ?? 'faculty';
 
 // Load university branding from system_settings
 $_sidebar_uni_name = 'University';
@@ -9,15 +10,25 @@ try {
     $_sidebar_uni_name = $_sidebar_settings['university_name'] ?? 'University';
     $_sidebar_uni_short = $_sidebar_settings['university_short_name'] ?? '';
 } catch (Exception $e) { /* fallback silently */ }
+
+$_portal_label = 'Faculty Portal';
+$_portal_icon = 'fa-chalkboard-teacher';
+if ($_faculty_role === 'dean') {
+    $_portal_label = 'Dean / HOD Portal';
+    $_portal_icon = 'fa-user-shield';
+} elseif ($_faculty_role === 'coordinator') {
+    $_portal_label = 'Coordinator Portal';
+    $_portal_icon = 'fa-user-tie';
+}
 ?>
 <!-- Sidebar -->
 <div class="border-end" id="sidebar-wrapper">
     <div class="sidebar-heading text-white py-4 px-3 text-center">
         <div class="mb-2">
-            <i class="fas fa-chalkboard-teacher fs-5 text-primary"></i>
+            <i class="fas <?php echo $_portal_icon; ?> fs-5 text-primary"></i>
         </div>
         <div class="fs-5 fw-bold text-light" style="letter-spacing: -0.5px;"><?php echo htmlspecialchars(strtoupper($_sidebar_uni_name)); ?></div>
-        <div class="text-primary fw-semibold mt-1" style="font-size: 0.8rem; text-transform: uppercase; letter-spacing: 1.5px;">Faculty Portal</div>
+        <div class="text-primary fw-semibold mt-1" style="font-size: 0.8rem; text-transform: uppercase; letter-spacing: 1.5px;"><?php echo $_portal_label; ?></div>
     </div>
     
     <div class="list-group list-group-flush mt-2 pb-4">
@@ -27,6 +38,43 @@ try {
         <a href="dashboard.php" class="list-group-item list-group-item-action py-2 px-3 <?php echo ($current_page == 'dashboard.php') ? 'active' : ''; ?>">
             <i class="fas fa-home me-3 nav-icon"></i> Dashboard
         </a>
+
+        <?php if ($_faculty_role === 'dean'): ?>
+        <!-- DEAN-ONLY: ORGANIZATION -->
+        <div class="px-3 pt-3 pb-1 text-uppercase text-muted fw-bold" style="font-size: 0.7rem; letter-spacing: 1px;">Organization</div>
+        <a href="org_chart.php" class="list-group-item list-group-item-action py-2 px-3 <?php echo ($current_page == 'org_chart.php') ? 'active' : ''; ?>">
+            <i class="fas fa-sitemap me-3 nav-icon"></i> Organization Chart
+        </a>
+        <a href="coordinators.php" class="list-group-item list-group-item-action py-2 px-3 <?php echo ($current_page == 'coordinators.php') ? 'active' : ''; ?>">
+            <i class="fas fa-user-tie me-3 nav-icon"></i> Course Coordinators
+        </a>
+        <a href="all_faculty.php" class="list-group-item list-group-item-action py-2 px-3 <?php echo ($current_page == 'all_faculty.php') ? 'active' : ''; ?>">
+            <i class="fas fa-chalkboard-teacher me-3 nav-icon"></i> All Faculty
+        </a>
+        <a href="all_students.php" class="list-group-item list-group-item-action py-2 px-3 <?php echo ($current_page == 'all_students.php') ? 'active' : ''; ?>">
+            <i class="fas fa-user-graduate me-3 nav-icon"></i> All Students
+        </a>
+        <a href="dept_reports.php" class="list-group-item list-group-item-action py-2 px-3 <?php echo ($current_page == 'dept_reports.php') ? 'active' : ''; ?>">
+            <i class="fas fa-chart-bar me-3 nav-icon"></i> Department Reports
+        </a>
+        <?php endif; ?>
+
+        <?php if ($_faculty_role === 'coordinator'): ?>
+        <!-- COORDINATOR-ONLY: COURSE MANAGEMENT -->
+        <div class="px-3 pt-3 pb-1 text-uppercase text-muted fw-bold" style="font-size: 0.7rem; letter-spacing: 1px;">Course Management</div>
+        <a href="course_overview.php" class="list-group-item list-group-item-action py-2 px-3 <?php echo ($current_page == 'course_overview.php') ? 'active' : ''; ?>">
+            <i class="fas fa-graduation-cap me-3 nav-icon"></i> Course Overview
+        </a>
+        <a href="course_faculty.php" class="list-group-item list-group-item-action py-2 px-3 <?php echo ($current_page == 'course_faculty.php') ? 'active' : ''; ?>">
+            <i class="fas fa-chalkboard-teacher me-3 nav-icon"></i> Course Faculty
+        </a>
+        <a href="course_students.php" class="list-group-item list-group-item-action py-2 px-3 <?php echo ($current_page == 'course_students.php') ? 'active' : ''; ?>">
+            <i class="fas fa-user-graduate me-3 nav-icon"></i> Course Students
+        </a>
+        <a href="course_reports.php" class="list-group-item list-group-item-action py-2 px-3 <?php echo ($current_page == 'course_reports.php') ? 'active' : ''; ?>">
+            <i class="fas fa-chart-pie me-3 nav-icon"></i> Course Reports
+        </a>
+        <?php endif; ?>
 
         <!-- TEACHING & ACADEMICS -->
         <div class="px-3 pt-3 pb-1 text-uppercase text-muted fw-bold" style="font-size: 0.7rem; letter-spacing: 1px;">Teaching & Academics</div>

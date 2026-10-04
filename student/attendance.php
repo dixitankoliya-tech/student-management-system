@@ -21,6 +21,7 @@ if (!$student) {
 // Fetch subject-wise attendance for the student
 $attStmt = $pdo->prepare("
     SELECT 
+        s.id,
         s.subject_name,
         s.subject_code,
         COUNT(a.id) as total_classes,
@@ -36,20 +37,15 @@ $attStmt = $pdo->prepare("
 $attStmt->execute([$student_id, $student['course'], $student['semester'], $student['division']]);
 $subject_attendance = $attStmt->fetchAll();
 
-// Calculate totals
-$overall_total = 0;
-$overall_present = 0;
-$overall_absent = 0;
-$overall_leave = 0;
+require_once '../includes/academic_calculator.php';
+$attendance_data = calculateAttendancePercentage($pdo, $student_id);
 
-foreach ($subject_attendance as $row) {
-    $overall_total += $row['total_classes'];
-    $overall_present += $row['present_count'];
-    $overall_absent += $row['absent_count'];
-    $overall_leave += $row['leave_count'];
-}
-
-$overall_pct = $overall_total > 0 ? round(($overall_present / $overall_total) * 100, 2) : 0;
+$overall_total = $attendance_data['total_lectures'];
+$overall_present = $attendance_data['present_lectures'];
+$overall_absent = $attendance_data['absent_lectures'];
+$overall_leave = $overall_total - $overall_present - $overall_absent; // Approximation or adjust if 'leave' is stored.
+$overall_pct = $attendance_data['percentage'];
+$attendance_status = $attendance_data['status'];
 
 include '../includes/student_header.php';
 include '../includes/student_sidebar.php';
@@ -63,12 +59,12 @@ include '../includes/student_navbar.php';
     </div>
 </div>
 
-<?php if ($overall_total > 0 && $overall_pct < 75): ?>
+<?php if ($overall_total > 0 && $attendance_status === 'SHORTAGE'): ?>
     <div class="alert alert-danger d-flex align-items-center py-3 rounded-3 shadow-sm border-0 mb-4">
         <i class="fas fa-exclamation-triangle fa-2x me-3"></i>
         <div>
             <h5 class="alert-heading mb-1 fw-bold">Academic Alert</h5>
-            <p class="mb-0">Your overall attendance (<?php echo $overall_pct; ?>%) is below the required 75% threshold. Please meet with your faculty advisor.</p>
+            <p class="mb-0">Your overall attendance (<?php echo $overall_pct; ?>%) is below the required threshold. Please meet with your faculty advisor.</p>
         </div>
     </div>
 <?php endif; ?>
@@ -146,9 +142,10 @@ include '../includes/student_navbar.php';
                         </tr>
                     <?php else: ?>
                         <?php foreach ($subject_attendance as $row): 
-                            $pct = $row['total_classes'] > 0 ? round(($row['present_count'] / $row['total_classes']) * 100, 2) : 0;
+                            $pctData = calculateSubjectAttendancePercentage($pdo, $student_id, $row['id'] ?? 0);
+                            $pct = $pctData['percentage'];
                             $pctClass = 'success';
-                            if ($pct < 75) $pctClass = 'danger';
+                            if ($pctData['status'] === 'SHORTAGE') $pctClass = 'danger';
                             elseif ($pct < 85) $pctClass = 'warning';
                         ?>
                             <tr>

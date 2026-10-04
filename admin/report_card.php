@@ -35,21 +35,26 @@ if (!$student) {
     exit();
 }
 
-// Fetch academic performance aggregate
-$stmt = $pdo->prepare("SELECT * FROM academic_performance WHERE student_id = ? AND semester = ?");
-$stmt->execute([$student_id, $semester]);
-$perf = $stmt->fetch();
+// Fetch academic performance aggregate via Centralized Engine
+$academic_data = calculateStudentCGPA($pdo, $student_id);
+$semester_data = $academic_data['semester_results'][$semester] ?? null;
 
-// Fetch subject marks
-$stmt = $pdo->prepare("
-    SELECT sm.*, s.subject_code, s.subject_name, s.credits, s.max_internal, s.max_external 
-    FROM student_marks sm 
-    JOIN subjects s ON sm.subject_id = s.id 
-    WHERE sm.student_id = ? AND sm.semester = ? 
-    ORDER BY s.subject_code ASC
-");
-$stmt->execute([$student_id, $semester]);
-$subjectMarks = $stmt->fetchAll();
+$attendance_data = calculateAttendancePercentage($pdo, $student_id, $semester);
+
+// Assign dynamic values to legacy variables for backward compatibility in view
+$perf = [];
+if ($semester_data) {
+    $perf['overall_percentage'] = $semester_data['overall_percentage'];
+    $perf['grade'] = $semester_data['sgpa'];
+    $perf['attendance_percentage'] = $attendance_data['percentage'];
+    $perf['performance_score'] = min(100, round(($semester_data['overall_percentage'] + $attendance_data['percentage']) / 2));
+    $perf['performance_category'] = $perf['performance_score'] > 80 ? 'Excellent' : ($perf['performance_score'] > 60 ? 'Good' : 'Needs Improvement');
+    $perf['class_rank'] = 'N/A'; // Dynamic ranking can be added later
+} else {
+    $perf = ['overall_percentage' => '0', 'grade' => 'N/A', 'attendance_percentage' => '0', 'performance_score' => '0', 'performance_category' => 'None', 'class_rank' => '-'];
+}
+
+$subjectMarks = $semester_data ? $semester_data['subjects'] : [];
 
 // Fetch student achievements
 $stmt = $pdo->prepare("SELECT * FROM achievements WHERE student_id = ?");
@@ -212,15 +217,15 @@ $insights = generateSmartInsights($pdo, $student_id, $semester);
                     $totObtained = 0;
                     $totMax = 0;
                     foreach ($subjectMarks as $sm): 
-                        $totObtained += (float)$sm['total_marks'];
-                        $totMax += (float)($sm['max_internal'] + $sm['max_external']);
+                        $totObtained += (float)$sm['marks_obtained'];
+                        $totMax += (float)$sm['max_marks'];
                     ?>
                         <tr>
                             <td class="font-monospace fw-bold"><?php echo htmlspecialchars($sm['subject_code']); ?></td>
                             <td class="text-start"><?php echo htmlspecialchars($sm['subject_name']); ?></td>
                             <td><?php echo $sm['internal_marks']; ?></td>
                             <td><?php echo $sm['external_marks']; ?></td>
-                            <td class="fw-bold text-dark"><?php echo $sm['total_marks']; ?></td>
+                            <td class="fw-bold text-dark"><?php echo $sm['marks_obtained']; ?> / <?php echo $sm['max_marks']; ?></td>
                             <td><span class="badge <?php echo ($sm['grade'] === 'F') ? 'bg-danger' : 'bg-light text-dark border'; ?>"><?php echo $sm['grade']; ?></span></td>
                         </tr>
                     <?php endforeach; ?>

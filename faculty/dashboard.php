@@ -5,16 +5,70 @@
 require_once '../config/database.php';
 require_once '../includes/faculty_auth.php';
 require_once '../config/academic_rules.php';
+require_once '../includes/faculty_role_helper.php';
 
 requireAuth();
 
 $user = getCurrentUser();
 $faculty_id = $_SESSION['faculty_db_id']; 
+$faculty_role = $_SESSION['faculty_role'] ?? 'faculty';
+$role_info = getFacultyRoleInfo($pdo, $faculty_id);
 
 $academicEngine = new AcademicEngine($pdo);
 $period = $academicEngine->getCurrentAcademicPeriod();
 $academicYear = $period ? $period['academic_year'] : 'N/A';
 $semesterType = $period ? $period['semester_type'] : 'N/A';
+
+// ============= ROLE-SPECIFIC OVERVIEW DATA =============
+$dean_stats = null;
+$coordinator_stats = null;
+
+if ($faculty_role === 'dean') {
+    $dean_stats = [
+        'total_students' => $pdo->query("SELECT COUNT(*) FROM students WHERE status = 'Active'")->fetchColumn(),
+        'total_faculty' => $pdo->query("SELECT COUNT(*) FROM faculty WHERE status = 'Active'")->fetchColumn(),
+        'total_courses' => $pdo->query("SELECT COUNT(*) FROM courses WHERE status = 'Active'")->fetchColumn(),
+        'total_subjects' => $pdo->query("SELECT COUNT(*) FROM subjects")->fetchColumn(),
+        'active_coordinators' => $pdo->query("SELECT COUNT(*) FROM course_coordinators WHERE status = 'Active'")->fetchColumn(),
+        'total_exams' => $pdo->query("SELECT COUNT(*) FROM examinations")->fetchColumn(),
+    ];
+    // Per-course stats
+    $dean_stats['courses'] = $pdo->query("
+        SELECT c.id, c.course_name, c.course_code, c.total_semesters,
+            (SELECT COUNT(*) FROM students s WHERE s.course = c.course_name AND s.status = 'Active') as student_count,
+            (SELECT COUNT(DISTINCT fs.faculty_id) FROM faculty_subjects fs WHERE fs.course = c.course_name) as faculty_count,
+            (SELECT COUNT(*) FROM subjects sub WHERE sub.course_id = c.id) as subject_count
+        FROM courses c WHERE c.status = 'Active' ORDER BY c.course_name
+    ")->fetchAll(PDO::FETCH_ASSOC);
+} elseif ($faculty_role === 'coordinator') {
+    $coord_course_ids = $role_info['coordinated_courses'];
+    if (!empty($coord_course_ids)) {
+        $cid = $coord_course_ids[0]; // Primary coordinated course
+        $cname_stmt = $pdo->prepare("SELECT course_name FROM courses WHERE id = ?");
+        $cname_stmt->execute([$cid]);
+        $coord_course_name = $cname_stmt->fetchColumn();
+        
+        $coordinator_stats = [
+            'course_id' => $cid,
+            'course_name' => $coord_course_name,
+            'student_count' => $pdo->prepare("SELECT COUNT(*) FROM students WHERE course = ? AND status = 'Active'")->execute([$coord_course_name]) ? $pdo->query("SELECT FOUND_ROWS()")->fetchColumn() : 0,
+            'faculty_count' => 0,
+            'subject_count' => 0,
+        ];
+        // Re-query properly
+        $sc = $pdo->prepare("SELECT COUNT(*) FROM students WHERE course = ? AND status = 'Active'");
+        $sc->execute([$coord_course_name]);
+        $coordinator_stats['student_count'] = $sc->fetchColumn();
+        
+        $fc = $pdo->prepare("SELECT COUNT(DISTINCT faculty_id) FROM faculty_subjects WHERE course = ?");
+        $fc->execute([$coord_course_name]);
+        $coordinator_stats['faculty_count'] = $fc->fetchColumn();
+        
+        $sbc = $pdo->prepare("SELECT COUNT(*) FROM subjects WHERE course_id = ?");
+        $sbc->execute([$cid]);
+        $coordinator_stats['subject_count'] = $sbc->fetchColumn();
+    }
+}
 
 // Fetch real stats
 $my_subjects_count = $academicEngine->getFacultySubjectCount($faculty_id, $academicYear, $semesterType);
@@ -102,10 +156,135 @@ include '../includes/faculty_sidebar.php';
             <i class="fas fa-clock me-1"></i> <?= htmlspecialchars($semesterType) ?> Semester
         </span>
         <span class="badge bg-success bg-opacity-10 text-success px-3 py-2 rounded-pill border border-success-subtle shadow-sm">
-            <i class="fas fa-chalkboard-teacher me-1"></i> Faculty Workspace
+            <i class="fas fa-<?php echo $faculty_role === 'dean' ? 'user-shield' : ($faculty_role === 'coordinator' ? 'user-tie' : 'chalkboard-teacher'); ?> me-1"></i> 
+            <?php echo $faculty_role === 'dean' ? 'Dean / HOD' : ($faculty_role === 'coordinator' ? 'Course Coordinator' : 'Faculty'); ?> Workspace
         </span>
     </div>
 </header>
+
+<?php if ($dean_stats): ?>
+<!-- DEAN: DEPARTMENT OVERVIEW -->
+<div class="alert alert-primary border-0 shadow-sm rounded-4 mb-4">
+    <div class="d-flex align-items-center">
+        <i class="fas fa-user-shield fs-4 text-primary me-3"></i>
+        <div>
+            <strong>Dean / HOD — FCAIT Department Overview</strong>
+            <span class="text-muted ms-2">You have department-wide visibility across all courses.</span>
+        </div>
+    </div>
+</div>
+<div class="row g-3 mb-5">
+    <div class="col-xl-2 col-md-4">
+        <div class="card border-0 shadow-sm rounded-4 text-center py-3">
+            <div class="card-body p-2">
+                <div class="fs-2 fw-bold text-primary"><?= $dean_stats['total_students'] ?></div>
+                <div class="text-muted small">Students</div>
+            </div>
+        </div>
+    </div>
+    <div class="col-xl-2 col-md-4">
+        <div class="card border-0 shadow-sm rounded-4 text-center py-3">
+            <div class="card-body p-2">
+                <div class="fs-2 fw-bold text-success"><?= $dean_stats['total_faculty'] ?></div>
+                <div class="text-muted small">Faculty</div>
+            </div>
+        </div>
+    </div>
+    <div class="col-xl-2 col-md-4">
+        <div class="card border-0 shadow-sm rounded-4 text-center py-3">
+            <div class="card-body p-2">
+                <div class="fs-2 fw-bold text-warning"><?= $dean_stats['total_courses'] ?></div>
+                <div class="text-muted small">Courses</div>
+            </div>
+        </div>
+    </div>
+    <div class="col-xl-2 col-md-4">
+        <div class="card border-0 shadow-sm rounded-4 text-center py-3">
+            <div class="card-body p-2">
+                <div class="fs-2 fw-bold text-info"><?= $dean_stats['total_subjects'] ?></div>
+                <div class="text-muted small">Subjects</div>
+            </div>
+        </div>
+    </div>
+    <div class="col-xl-2 col-md-4">
+        <div class="card border-0 shadow-sm rounded-4 text-center py-3">
+            <div class="card-body p-2">
+                <div class="fs-2 fw-bold text-secondary"><?= $dean_stats['active_coordinators'] ?></div>
+                <div class="text-muted small">Coordinators</div>
+            </div>
+        </div>
+    </div>
+    <div class="col-xl-2 col-md-4">
+        <div class="card border-0 shadow-sm rounded-4 text-center py-3">
+            <div class="card-body p-2">
+                <div class="fs-2 fw-bold text-danger"><?= $dean_stats['total_exams'] ?></div>
+                <div class="text-muted small">Examinations</div>
+            </div>
+        </div>
+    </div>
+</div>
+<!-- Course Comparison Table -->
+<div class="card border-0 shadow-sm rounded-4 mb-5">
+    <div class="card-header bg-white border-0 pt-4 px-4"><h5 class="fw-bold mb-0"><i class="fas fa-chart-bar text-primary me-2"></i>Course Comparison</h5></div>
+    <div class="card-body p-4">
+        <div class="table-responsive">
+            <table class="table table-hover align-middle">
+                <thead class="table-light"><tr><th>Course</th><th>Students</th><th>Faculty</th><th>Subjects</th><th>Semesters</th></tr></thead>
+                <tbody>
+                    <?php foreach ($dean_stats['courses'] as $dc): ?>
+                    <tr>
+                        <td class="fw-bold"><?= htmlspecialchars($dc['course_name']) ?></td>
+                        <td><span class="badge bg-primary rounded-pill"><?= $dc['student_count'] ?></span></td>
+                        <td><span class="badge bg-success rounded-pill"><?= $dc['faculty_count'] ?></span></td>
+                        <td><span class="badge bg-info rounded-pill"><?= $dc['subject_count'] ?></span></td>
+                        <td><?= $dc['total_semesters'] ?></td>
+                    </tr>
+                    <?php endforeach; ?>
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+<?php endif; ?>
+
+<?php if ($coordinator_stats): ?>
+<!-- COORDINATOR: COURSE OVERVIEW -->
+<div class="alert alert-warning border-0 shadow-sm rounded-4 mb-4">
+    <div class="d-flex align-items-center">
+        <i class="fas fa-user-tie fs-4 text-warning me-3"></i>
+        <div>
+            <strong>Course Coordinator — <?= htmlspecialchars($coordinator_stats['course_name']) ?></strong>
+            <span class="text-muted ms-2">You manage this course's academic operations.</span>
+        </div>
+    </div>
+</div>
+<div class="row g-3 mb-5">
+    <div class="col-md-4">
+        <div class="card border-0 shadow-sm rounded-4 text-center py-3">
+            <div class="card-body p-2">
+                <div class="fs-2 fw-bold text-primary"><?= $coordinator_stats['student_count'] ?></div>
+                <div class="text-muted small">Students in <?= htmlspecialchars($coordinator_stats['course_name']) ?></div>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-4">
+        <div class="card border-0 shadow-sm rounded-4 text-center py-3">
+            <div class="card-body p-2">
+                <div class="fs-2 fw-bold text-success"><?= $coordinator_stats['faculty_count'] ?></div>
+                <div class="text-muted small">Teaching Faculty</div>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-4">
+        <div class="card border-0 shadow-sm rounded-4 text-center py-3">
+            <div class="card-body p-2">
+                <div class="fs-2 fw-bold text-info"><?= $coordinator_stats['subject_count'] ?></div>
+                <div class="text-muted small">Subjects</div>
+            </div>
+        </div>
+    </div>
+</div>
+<?php endif; ?>
 
     <!-- KPI GRID -->
     <div class="row g-4 mb-5">

@@ -58,6 +58,9 @@ try {
 
         <!-- PEOPLE -->
         <div class="px-3 pt-3 pb-1 text-uppercase text-muted fw-bold" style="font-size: 0.7rem; letter-spacing: 1px;">People</div>
+        <a href="leadership.php" class="list-group-item list-group-item-action py-2 px-3 <?php echo (basename($_SERVER['PHP_SELF']) == 'leadership.php') ? 'active' : ''; ?>">
+            <i class="fas fa-sitemap me-3 nav-icon"></i> Leadership
+        </a>
         <a href="students.php" class="list-group-item list-group-item-action py-2 px-3 <?php echo (in_array(basename($_SERVER['PHP_SELF']), ['students.php', 'view_student.php', 'edit_student.php', 'add_student.php'])) ? 'active' : ''; ?>">
             <i class="fas fa-user-graduate me-3 nav-icon"></i> Students
         </a>
@@ -81,6 +84,9 @@ try {
         </a>
         <a href="report_cards.php" class="list-group-item list-group-item-action py-2 px-3 <?php echo (in_array(basename($_SERVER['PHP_SELF']), ['report_cards.php', 'report_card.php', 'manage_marks.php'])) ? 'active' : ''; ?>">
             <i class="fas fa-award me-3 nav-icon"></i> Results
+        </a>
+        <a href="academic_reports.php" class="list-group-item list-group-item-action py-2 px-3 <?php echo (basename($_SERVER['PHP_SELF']) == 'academic_reports.php') ? 'active' : ''; ?>">
+            <i class="fas fa-chart-bar me-3 nav-icon"></i> Advanced Reports
         </a>
         <a href="assignments.php" class="list-group-item list-group-item-action py-2 px-3 <?php echo (basename($_SERVER['PHP_SELF']) == 'assignments.php') ? 'active' : ''; ?>">
             <i class="fas fa-file-signature me-3 nav-icon"></i> Assignments

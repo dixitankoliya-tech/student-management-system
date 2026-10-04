@@ -22,14 +22,15 @@ if ($course && $semester) {
     // Generate the report: group by student, count total sessions, present, absent, leave, calculate percentage
     $sql = "
         SELECT 
-            s.id, s.enrollment_no, s.first_name, s.last_name, s.division,
+            s.id, s.enrollment_no, s.first_name, s.last_name, sae.division,
             COUNT(a.id) as total_sessions,
             SUM(CASE WHEN a.status = 'Present' THEN 1 ELSE 0 END) as present_count,
             SUM(CASE WHEN a.status = 'Absent' THEN 1 ELSE 0 END) as absent_count,
             SUM(CASE WHEN a.status = 'Leave' THEN 1 ELSE 0 END) as leave_count
         FROM students s
+        JOIN student_academic_enrollments sae ON s.id = sae.student_id AND sae.status = 'Active'
         LEFT JOIN attendance a ON s.id = a.student_id AND a.attendance_date BETWEEN ? AND ?
-        WHERE s.course = ? AND s.semester = ?
+        WHERE sae.course = ? AND sae.semester = ?
         GROUP BY s.id
         ORDER BY s.enrollment_no ASC
     ";

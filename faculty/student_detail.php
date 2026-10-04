@@ -14,20 +14,28 @@ if (!$student_id) {
     exit();
 }
 
-// Ensure the student belongs to a course the faculty teaches
+require_once '../includes/faculty_role_helper.php';
+
+// Ensure the student belongs to a course the faculty teaches/manages
 try {
+    $accessible_student_ids = getAccessibleStudentIds($pdo, $faculty_id);
+    
+    if (!in_array($student_id, $accessible_student_ids)) {
+        header("Location: my_students.php?error=" . urlencode("Unauthorized access or student not found."));
+        exit();
+    }
+    
     $stmt = $pdo->prepare("
-        SELECT DISTINCT st.*, sae.division as active_division, sae.academic_year
+        SELECT st.*, sae.division as active_division, sae.academic_year
         FROM students st
         JOIN student_academic_enrollments sae ON st.id = sae.student_id AND sae.status = 'Active'
-        JOIN faculty_subjects fs ON sae.course = fs.course AND sae.semester = fs.semester AND sae.division = fs.division AND sae.academic_year = fs.academic_year
-        WHERE fs.faculty_id = ? AND st.id = ?
+        WHERE st.id = ?
     ");
-    $stmt->execute([$faculty_id, $student_id]);
+    $stmt->execute([$student_id]);
     $student = $stmt->fetch();
 
     if (!$student) {
-        header("Location: my_students.php?error=" . urlencode("Unauthorized access or student not found."));
+        header("Location: my_students.php?error=" . urlencode("Student data error."));
         exit();
     }
 

@@ -1,0 +1,112 @@
+=== FACULTY SAMPLE ===
+  ID=1 FID=FAC-FCAIT-001 FacFirstName1 FacLastName1 | HOD | FCAIT | Active
+  ID=2 FID=FAC-FCAIT-002 FacFirstName2 FacLastName2 | Assistant Professor | FCAIT | Active
+  ID=3 FID=FAC-FCAIT-003 FacFirstName3 FacLastName3 | Assistant Professor | FCAIT | Active
+  ID=4 FID=FAC-FCAIT-004 FacFirstName4 FacLastName4 | Assistant Professor | FCAIT | Active
+  ID=5 FID=FAC-FCAIT-005 FacFirstName5 FacLastName5 | Assistant Professor | FCAIT | Active
+  ID=6 FID=FAC-FCAIT-006 FacFirstName6 FacLastName6 | Assistant Professor | FCAIT | Active
+  ID=7 FID=FAC-FCAIT-007 FacFirstName7 FacLastName7 | Assistant Professor | FCAIT | Active
+  ID=8 FID=FAC-FCAIT-008 FacFirstName8 FacLastName8 | Assistant Professor | FCAIT | Active
+  ID=9 FID=FAC-FCAIT-009 FacFirstName9 FacLastName9 | Assistant Professor | FCAIT | Active
+  ID=10 FID=FAC-FCAIT-010 FacFirstName10 FacLastName10 | Assistant Professor | FCAIT | Active
+
+=== FACULTY DESIGNATIONS ===
+  Assistant Professor: 44
+  HOD: 1
+
+=== FACULTY DEPARTMENTS ===
+  FCAIT: 45
+
+=== HOD/DEAN ===
+Count: 1
+  ID=1 FacFirstName1 FacLastName1 - HOD
+
+=== USERS TABLE ===
+  id                       int                           
+  student_id               int                           
+  faculty_id               int                           
+  username                 varchar(50)                   
+  email                    varchar(100)                  
+  password_hash            varchar(255)                  
+  full_name                varchar(100)                  
+  role                     enum('admin','faculty','student')student
+  is_active                tinyint(1)                    1
+  last_login               timestamp                     
+  created_at               timestamp                     CURRENT_TIMESTAMP
+  updated_at               timestamp                     CURRENT_TIMESTAMP
+  must_change_password     tinyint(1)                    0
+
+  Users sample:
+    ID=1 user=GLS_ADMIN role=admin
+    ID=100559 user=FAC-FCAIT-001 role=faculty
+    ID=100560 user=FAC-FCAIT-002 role=faculty
+    ID=100561 user=FAC-FCAIT-003 role=faculty
+    ID=100562 user=FAC-FCAIT-004 role=faculty
+    ID=100563 user=FAC-FCAIT-005 role=faculty
+    ID=100564 user=FAC-FCAIT-006 role=faculty
+    ID=100565 user=FAC-FCAIT-007 role=faculty
+    ID=100566 user=FAC-FCAIT-008 role=faculty
+    ID=100567 user=FAC-FCAIT-009 role=faculty
+
+  Role counts:
+    admin: 1
+    faculty: 45
+    student: 500
+
+=== FACULTY_SUBJECTS ===
+  id                       int
+  faculty_id               int
+  subject_id               int
+  course                   varchar(50)
+  academic_year            varchar(20)
+  semester                 int
+  division                 varchar(10)
+  Total: 256
+
+=== DEPARTMENTS ===
+  ID=1 name=Faculty of Computer Applications & Information Technology code=FCAIT
+
+=== COURSES ===
+  id=1 | course_code=B.Sc. IT (Dual) | course_name=B.Sc. Information Technology (Dual) | description= | duration_years=3 | total_semesters=6 | degree_type=UG | admission_status=Open | department_id=1 | status=Active | created_at=2026-10-04 10:34:04
+  id=2 | course_code=BCA (Dual) | course_name=Bachelor of Computer Applications (Dual) | description= | duration_years=3 | total_semesters=6 | degree_type=UG | admission_status=Open | department_id=1 | status=Active | created_at=2026-10-04 10:34:04
+  id=3 | course_code=BCA | course_name=Bachelor of Computer Applications | description= | duration_years=3 | total_semesters=6 | degree_type=UG | admission_status=Open | department_id=1 | status=Active | created_at=2026-10-04 10:34:04
+  id=4 | course_code=I.M.Sc. IT | course_name=Integrated M.Sc. IT | description= | duration_years=5 | total_semesters=10 | degree_type=PG | admission_status=Open | department_id=1 | status=Active | created_at=2026-10-04 10:34:04
+  id=5 | course_code=M.Sc. IT | course_name=Master of Science in IT | description= | duration_years=2 | total_semesters=4 | degree_type=PG | admission_status=Open | department_id=1 | status=Active | created_at=2026-10-04 10:34:04
+
+=== ALL TABLES WITH COUNTS ===
+  academic_calendar                       0
+  academic_calendars                      0
+  academic_performance                    0
+  academic_years                          2
+  achievements                            0
+  activity_logs                           0
+  announcements                           0
+  assignment_submissions                  0
+  assignments                             0
+  attendance                              0
+  audit_logs                              0
+  courses                                 5
+  departments                             1
+  divisions                               0
+  exam_schedules                          0
+  examinations                            1
+  faculty                                 45
+  faculty_subjects                        256
+  fee_payments                            0
+  fee_structures                          0
+  marks                                   2000
+  notifications                           0
+  profile_change_requests                 0
+  promotion_history                       0
+  semesters_master                        8
+  sessions                                0
+  student_academic_enrollments            500
+  student_fees                            0
+  student_marks                           2000
+  student_subject_enrollments             2000
+  students                                500
+  study_materials                         0
+  subjects                                128
+  system_settings                         12
+  timetables                              0
+  users                                   546

@@ -17,25 +17,28 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['save_attendance'])) {
     requireValidCsrf();
     $attendance_date = $_POST['attendance_date'];
     $subject_id = (int)$_POST['subject_id'];
+    $division = $_POST['division'] ?? '';
+    $course = $_POST['course'] ?? '';
+    $semester = $_POST['semester'] ?? '';
     
     try {
-        if (empty($subject_id)) {
-            throw new Exception("Subject is required to mark attendance.");
+        if (empty($subject_id) || empty($division)) {
+            throw new Exception("Subject and Division are required to mark attendance.");
         }
 
         $pdo->beginTransaction();
         
-        $stmt = $pdo->prepare("INSERT INTO attendance (student_id, subject_id, attendance_date, status) VALUES (?, ?, ?, ?) ON DUPLICATE KEY UPDATE status = VALUES(status)");
+        $stmt = $pdo->prepare("INSERT INTO attendance (student_id, subject_id, division, attendance_date, status) VALUES (?, ?, ?, ?, ?) ON DUPLICATE KEY UPDATE status = VALUES(status)");
         
         if (isset($_POST['attendance']) && is_array($_POST['attendance'])) {
             foreach ($_POST['attendance'] as $student_id => $status) {
-                $stmt->execute([$student_id, $subject_id, $attendance_date, $status]);
+                $stmt->execute([$student_id, $subject_id, $division, $attendance_date, $status]);
             }
         }
         
         $pdo->commit();
-        logActivity($pdo, 'MARK_ATTENDANCE', null, "Admin marked attendance for Subject $subject_id on $attendance_date");
-        header("Location: attendance.php?date=$attendance_date&semester=$filter_semester&course=" . urlencode($filter_course) . "&subject_id=$subject_id&msg=saved");
+        logActivity($pdo, 'MARK_ATTENDANCE', null, "Admin marked attendance for Subject $subject_id, Div $division on $attendance_date");
+        header("Location: attendance.php?date=$attendance_date&semester=$semester&course=" . urlencode($course) . "&subject_id=$subject_id&division=" . urlencode($division) . "&msg=saved");
         exit();
     } catch(Exception $e) {
         if ($pdo->inTransaction()) {
@@ -44,6 +47,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['save_attendance'])) {
         $error = "Error saving attendance: " . $e->getMessage();
     }
 }
+
+$filter_division = isset($_GET['division']) ? $_GET['division'] : '';
 
 // Get unique courses for filter
 $courses = $pdo->query("SELECT DISTINCT course FROM students ORDER BY course")->fetchAll(PDO::FETCH_COLUMN);
@@ -58,14 +63,15 @@ if ($filter_course && $filter_semester) {
 
 // Build query
 $students = [];
-if ($filter_course && $filter_semester && $filter_subject_id) {
+if ($filter_course && $filter_semester && $filter_subject_id && $filter_division) {
     $sql = "SELECT s.id, s.enrollment_no, s.first_name, s.last_name, a.status 
             FROM students s 
-            LEFT JOIN attendance a ON s.id = a.student_id AND a.attendance_date = ? AND a.subject_id = ?
-            WHERE s.course = ? AND s.semester = ?
+            JOIN student_academic_enrollments sae ON s.id = sae.student_id AND sae.status = 'Active'
+            LEFT JOIN attendance a ON s.id = a.student_id AND a.attendance_date = ? AND a.subject_id = ? AND a.division = ?
+            WHERE sae.course = ? AND sae.semester = ? AND sae.division = ?
             ORDER BY s.enrollment_no ASC";
     $stmt = $pdo->prepare($sql);
-    $stmt->execute([$filter_date, $filter_subject_id, $filter_course, $filter_semester]);
+    $stmt->execute([$filter_date, $filter_subject_id, $filter_division, $filter_course, $filter_semester, $filter_division]);
     $students = $stmt->fetchAll(PDO::FETCH_ASSOC);
 }
 
@@ -104,22 +110,31 @@ include '../includes/admin_sidebar.php';
                 <label class="form-label text-muted small text-uppercase fw-bold">Date</label>
                 <input type="date" name="date" class="form-control" value="<?php echo htmlspecialchars($filter_date); ?>" onchange="document.getElementById('filterForm').submit();" required>
             </div>
-            <div class="col-md-3">
+            <div class="col-md-2">
                 <label class="form-label text-muted small text-uppercase fw-bold">Course</label>
                 <select name="course" class="form-select" onchange="document.getElementById('filterForm').submit();" required>
-                    <option value="">Select Course...</option>
+                    <option value="">Select...</option>
                     <?php foreach($courses as $c): ?>
                         <option value="<?php echo htmlspecialchars($c); ?>" <?php echo $c === $filter_course ? 'selected' : ''; ?>><?php echo htmlspecialchars($c); ?></option>
                     <?php endforeach; ?>
                 </select>
             </div>
-            <div class="col-md-3">
+            <div class="col-md-2">
                 <label class="form-label text-muted small text-uppercase fw-bold">Semester</label>
                 <select name="semester" class="form-select" onchange="document.getElementById('filterForm').submit();" required>
-                    <option value="">Select Semester...</option>
+                    <option value="">Select...</option>
                     <?php for($i=1; $i<=8; $i++): ?>
-                        <option value="<?php echo $i; ?>" <?php echo $i === $filter_semester ? 'selected' : ''; ?>>Semester <?php echo $i; ?></option>
+                        <option value="<?php echo $i; ?>" <?php echo $i === $filter_semester ? 'selected' : ''; ?>>Sem <?php echo $i; ?></option>
                     <?php endfor; ?>
+                </select>
+            </div>
+            <div class="col-md-2">
+                <label class="form-label text-muted small text-uppercase fw-bold">Division</label>
+                <select name="division" class="form-select" onchange="document.getElementById('filterForm').submit();" required>
+                    <option value="">Select...</option>
+                    <?php foreach(['A','B','C','D'] as $div): ?>
+                        <option value="<?php echo $div; ?>" <?php echo $div === $filter_division ? 'selected' : ''; ?>><?php echo $div; ?></option>
+                    <?php endforeach; ?>
                 </select>
             </div>
             <div class="col-md-4">
@@ -147,6 +162,9 @@ include '../includes/admin_sidebar.php';
             <?php csrfField(); ?>
             <input type="hidden" name="attendance_date" value="<?php echo htmlspecialchars($filter_date); ?>">
             <input type="hidden" name="subject_id" value="<?php echo htmlspecialchars($filter_subject_id); ?>">
+            <input type="hidden" name="division" value="<?php echo htmlspecialchars($filter_division); ?>">
+            <input type="hidden" name="course" value="<?php echo htmlspecialchars($filter_course); ?>">
+            <input type="hidden" name="semester" value="<?php echo htmlspecialchars($filter_semester); ?>">
             
             <div class="p-4 border-bottom bg-light d-flex justify-content-between align-items-center">
                 <h5 class="mb-0 text-primary fw-bold"><i class="fas fa-users me-2"></i> Students List</h5>

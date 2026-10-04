@@ -1,6 +1,6 @@
 <?php
 /**
- * SMS 2.0: Academic Calculator Helper
+ * SMS 2.0: Academic Calculator Helper (Master Engine)
  */
 
 function calculateGrade($percentage) {
@@ -31,11 +31,19 @@ function calculateSemesterResult($marks_array) {
                 'subject_code' => $m['subject_code'],
                 'credits' => $m['credits'] ?? 3, // fallback to 3 credits
                 'max_marks' => 0,
-                'marks_obtained' => 0
+                'marks_obtained' => 0,
+                'internal_marks' => 0,
+                'external_marks' => 0
             ];
         }
         $subject_aggregates[$sub_id]['max_marks'] += $m['max_marks'];
         $subject_aggregates[$sub_id]['marks_obtained'] += $m['marks_obtained'];
+        if (isset($m['internal_marks'])) {
+            $subject_aggregates[$sub_id]['internal_marks'] += $m['internal_marks'];
+        }
+        if (isset($m['external_marks'])) {
+            $subject_aggregates[$sub_id]['external_marks'] += $m['external_marks'];
+        }
     }
     
     foreach ($subject_aggregates as $sub_id => $agg) {
@@ -51,6 +59,8 @@ function calculateSemesterResult($marks_array) {
             'credits' => $agg['credits'],
             'max_marks' => $agg['max_marks'],
             'marks_obtained' => $agg['marks_obtained'],
+            'internal_marks' => $agg['internal_marks'],
+            'external_marks' => $agg['external_marks'],
             'percentage' => round($pct, 2),
             'grade' => $grade_info['grade'],
             'grade_point' => $grade_info['point'],
@@ -74,6 +84,141 @@ function calculateSemesterResult($marks_array) {
         'total_credits' => $total_credits,
         'sgpa' => round($sgpa, 2),
         'result_status' => $has_failed ? 'Fail' : 'Pass'
+    ];
+}
+
+function calculateStudentCGPA($pdo, $student_id) {
+    // Fetch all Locked/Published marks
+    $marksStmt = $pdo->prepare("
+        SELECT 
+            m.subject_id,
+            s.subject_name,
+            s.subject_code,
+            s.credits,
+            s.semester,
+            m.max_marks,
+            m.marks_obtained,
+            sm.internal_marks,
+            sm.external_marks
+        FROM marks m
+        JOIN subjects s ON m.subject_id = s.id
+        LEFT JOIN student_marks sm ON sm.student_id = m.student_id AND sm.subject_id = m.subject_id
+        WHERE m.student_id = ? AND m.status = 'Locked'
+        ORDER BY s.semester DESC, s.subject_name ASC
+    ");
+    $marksStmt->execute([$student_id]);
+    $all_marks = $marksStmt->fetchAll(PDO::FETCH_ASSOC);
+
+    // Group marks by semester
+    $semester_marks = [];
+    foreach ($all_marks as $m) {
+        $sem = $m['semester'];
+        if (!isset($semester_marks[$sem])) {
+            $semester_marks[$sem] = [];
+        }
+        $semester_marks[$sem][] = $m;
+    }
+
+    $total_credits_all = 0;
+    $total_points_all = 0;
+    $semester_results = [];
+
+    foreach ($semester_marks as $sem => $marks) {
+        $res = calculateSemesterResult($marks);
+        $semester_results[$sem] = $res;
+        $total_credits_all += $res['total_credits'];
+        $total_points_all += ($res['sgpa'] * $res['total_credits']);
+    }
+
+    $cgpa = $total_credits_all > 0 ? round($total_points_all / $total_credits_all, 2) : 0;
+    
+    return [
+        'cgpa' => $cgpa,
+        'total_credits' => $total_credits_all,
+        'semester_results' => $semester_results
+    ];
+}
+
+function calculateAttendancePercentage($pdo, $student_id, $semester = null, $min_required = 75) {
+    $sql = "SELECT COUNT(*) as total_lectures, SUM(CASE WHEN status = 'Present' THEN 1 ELSE 0 END) as present_lectures 
+            FROM attendance WHERE student_id = ?";
+    $params = [$student_id];
+    
+    if ($semester) {
+        $sql .= " AND subject_id IN (SELECT id FROM subjects WHERE semester = ?)";
+        $params[] = $semester;
+    }
+    
+    $stmt = $pdo->prepare($sql);
+    $stmt->execute($params);
+    $result = $stmt->fetch(PDO::FETCH_ASSOC);
+    
+    $total = (int)$result['total_lectures'];
+    $present = (int)$result['present_lectures'];
+    
+    $percentage = $total > 0 ? round(($present / $total) * 100, 2) : 0;
+    
+    return [
+        'total_lectures' => $total,
+        'present_lectures' => $present,
+        'absent_lectures' => $total - $present,
+        'percentage' => $percentage,
+        'status' => $percentage >= $min_required || $total == 0 ? 'SAFE' : 'SHORTAGE'
+    ];
+}
+
+function calculateSubjectAttendancePercentage($pdo, $student_id, $subject_id, $min_required = 75) {
+    $stmt = $pdo->prepare("SELECT COUNT(*) as total_lectures, SUM(CASE WHEN status = 'Present' THEN 1 ELSE 0 END) as present_lectures FROM attendance WHERE student_id = ? AND subject_id = ?");
+    $stmt->execute([$student_id, $subject_id]);
+    $result = $stmt->fetch(PDO::FETCH_ASSOC);
+    
+    $total = (int)$result['total_lectures'];
+    $present = (int)$result['present_lectures'];
+    $percentage = $total > 0 ? round(($present / $total) * 100, 2) : 0;
+    
+    return [
+        'total_lectures' => $total,
+        'present_lectures' => $present,
+        'absent_lectures' => $total - $present,
+        'percentage' => $percentage,
+        'status' => $percentage >= $min_required || $total == 0 ? 'SAFE' : 'SHORTAGE'
+    ];
+}
+function calculateAggregateAttendance($pdo, $date = null, $course = null, $semester = null) {
+    $sql = "SELECT COUNT(*) as total_lectures, SUM(CASE WHEN status = 'Present' THEN 1 ELSE 0 END) as present_lectures FROM attendance WHERE 1=1";
+    $params = [];
+    
+    if ($date) {
+        $sql .= " AND attendance_date = ?";
+        $params[] = $date;
+    }
+    
+    if ($course || $semester) {
+        $sql .= " AND student_id IN (SELECT student_id FROM student_academic_enrollments WHERE status = 'Active'";
+        if ($course) {
+            $sql .= " AND course = ?";
+            $params[] = $course;
+        }
+        if ($semester) {
+            $sql .= " AND semester = ?";
+            $params[] = $semester;
+        }
+        $sql .= ")";
+    }
+    
+    $stmt = $pdo->prepare($sql);
+    $stmt->execute($params);
+    $result = $stmt->fetch(PDO::FETCH_ASSOC);
+    
+    $total = (int)$result['total_lectures'];
+    $present = (int)$result['present_lectures'];
+    $percentage = $total > 0 ? round(($present / $total) * 100, 2) : 0;
+    
+    return [
+        'total_lectures' => $total,
+        'present_lectures' => $present,
+        'absent_lectures' => $total - $present,
+        'percentage' => $percentage
     ];
 }
 ?>

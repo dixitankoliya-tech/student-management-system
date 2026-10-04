@@ -15,6 +15,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
     if (isset($_POST['add_exam'])) {
         $exam_name = trim($_POST['exam_name'] ?? '');
+        $exam_type = $_POST['exam_type'] ?? 'End Semester';
         $course = $_POST['course'] ?? '';
         $academic_year = $_POST['academic_year'] ?? '';
         $semester = (int)($_POST['semester'] ?? 1);
@@ -25,8 +26,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $error = 'Exam Name, Course, and Academic Year are required.';
         } else {
             try {
-                $stmt = $pdo->prepare("INSERT INTO examinations (exam_name, course, academic_year, semester, start_date, end_date) VALUES (?, ?, ?, ?, ?, ?)");
-                $stmt->execute([$exam_name, $course, $academic_year, $semester, $start_date, $end_date]);
+                $stmt = $pdo->prepare("INSERT INTO examinations (exam_name, exam_type, course, academic_year, semester, start_date, end_date) VALUES (?, ?, ?, ?, ?, ?, ?)");
+                $stmt->execute([$exam_name, $exam_type, $course, $academic_year, $semester, $start_date, $end_date]);
                 logActivity($pdo, 'ADD_EXAM', null, "Added exam: $exam_name");
                 
                 // Notify students
@@ -109,7 +110,7 @@ include '../includes/admin_sidebar.php';
                     <tbody>
                         <?php foreach ($exams as $ex): ?>
                         <tr>
-                            <td><strong><?= htmlspecialchars($ex['exam_name']) ?></strong></td>
+                            <td><strong><?= htmlspecialchars($ex['exam_name']) ?></strong><br><small class="text-muted"><?= htmlspecialchars($ex['exam_type']) ?></small></td>
                             <td><?= htmlspecialchars($ex['course']) ?> / Sem <?= $ex['semester'] ?> (<?= htmlspecialchars($ex['academic_year']) ?>)</td>
                             <td>
                                 <?= $ex['start_date'] ? date('d M Y', strtotime($ex['start_date'])) : 'TBD' ?> 
@@ -137,7 +138,8 @@ include '../includes/admin_sidebar.php';
                                         <option value="Completed" <?= $ex['status'] == 'Completed' ? 'selected' : '' ?>>Completed</option>
                                         <option value="Results Published" <?= $ex['status'] == 'Results Published' ? 'selected' : '' ?>>Results Published</option>
                                     </select>
-                                    <button type="submit" name="update_status" class="btn btn-sm btn-outline-primary"><i class="fas fa-save"></i></button>
+                                    <button type="submit" name="update_status" class="btn btn-sm btn-outline-primary me-2"><i class="fas fa-save"></i></button>
+                                    <a href="exam_schedules.php?exam_id=<?= $ex['id'] ?>" class="btn btn-sm btn-outline-info" title="Manage Timetable"><i class="fas fa-calendar-alt"></i></a>
                                 </form>
                             </td>
                         </tr>
@@ -158,9 +160,21 @@ include '../includes/admin_sidebar.php';
                     <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
                 </div>
                 <div class="modal-body p-4">
-                    <div class="mb-3">
-                        <label class="form-label text-muted fw-semibold">Exam Name (e.g. Mid-Term, Final)</label>
-                        <input type="text" name="exam_name" class="form-control" required>
+                    <div class="row g-3 mb-3">
+                        <div class="col-8">
+                            <label class="form-label text-muted fw-semibold">Exam Name (e.g. Mid-Term, Final)</label>
+                            <input type="text" name="exam_name" class="form-control" required>
+                        </div>
+                        <div class="col-4">
+                            <label class="form-label text-muted fw-semibold">Exam Type</label>
+                            <select name="exam_type" class="form-select" required>
+                                <option value="End Semester">End Semester</option>
+                                <option value="Mid Semester">Mid Semester</option>
+                                <option value="Internal">Internal</option>
+                                <option value="Practical">Practical</option>
+                                <option value="Backlog">Backlog / ATKT</option>
+                            </select>
+                        </div>
                     </div>
                     <div class="row g-3 mb-3">
                         <div class="col-6">

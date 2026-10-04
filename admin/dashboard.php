@@ -16,17 +16,10 @@ $activeExams = $pdo->query("SELECT COUNT(*) FROM examinations WHERE status IN ('
 $publishedResults = $pdo->query("SELECT COUNT(*) FROM examinations WHERE status = 'Results Published'")->fetchColumn();
 
 // Fetch today's attendance stats
+require_once '../includes/academic_calculator.php';
 $today = date('Y-m-d');
-$attendanceStatsStmt = $pdo->prepare("SELECT 
-    COUNT(id) as total_marked,
-    SUM(CASE WHEN status = 'Present' THEN 1 ELSE 0 END) as present_count,
-    SUM(CASE WHEN status = 'Absent' THEN 1 ELSE 0 END) as absent_count,
-    SUM(CASE WHEN status = 'Leave' THEN 1 ELSE 0 END) as leave_count
-    FROM attendance WHERE attendance_date = ?");
-$attendanceStatsStmt->execute([$today]);
-$attendanceStats = $attendanceStatsStmt->fetch(PDO::FETCH_ASSOC);
-
-$attendancePercent = ($attendanceStats['total_marked'] > 0) ? round(($attendanceStats['present_count'] / $attendanceStats['total_marked']) * 100, 1) : 0;
+$attendanceStats = calculateAggregateAttendance($pdo, $today);
+$attendancePercent = $attendanceStats['percentage'];
 
 // Financial Overview
 $totalFees = $pdo->query("SELECT SUM(total_amount) FROM student_fees")->fetchColumn() ?: 0;
@@ -167,8 +160,8 @@ include '../includes/admin_header.php';
                                 </div>
                             </div>
                             <div class="text-muted" style="font-size: 0.8rem;">
-                                <?php if($attendanceStats['total_marked'] > 0): ?>
-                                    <span class="text-dark fw-bold"><?php echo $attendanceStats['present_count']; ?></span> present out of <?php echo $attendanceStats['total_marked']; ?> marked
+                                <?php if($attendanceStats['total_lectures'] > 0): ?>
+                                    <span class="text-dark fw-bold"><?php echo $attendanceStats['present_lectures']; ?></span> present out of <?php echo $attendanceStats['total_lectures']; ?> marked
                                 <?php else: ?>
                                     No attendance marked today yet.
                                 <?php endif; ?>
@@ -345,7 +338,7 @@ include '../includes/admin_header.php';
                                             <div class="small text-muted">Students marked absent across all classes</div>
                                         </div>
                                     </div>
-                                    <span class="badge bg-danger rounded-pill px-3 py-2"><?php echo $attendanceStats['absent_count'] ?? 0; ?></span>
+                                    <span class="badge bg-danger rounded-pill px-3 py-2"><?php echo $attendanceStats['absent_lectures'] ?? 0; ?></span>
                                 </li>
                             </ul>
                         </div>

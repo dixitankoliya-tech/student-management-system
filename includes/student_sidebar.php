@@ -56,6 +56,11 @@
                 <a href="report_card.php" class="list-group-item list-group-item-action py-2 px-3 <?php echo (basename($_SERVER['PHP_SELF']) == 'report_card.php') ? 'active' : ''; ?>">
                     <i class="fas fa-file-invoice me-3 nav-icon"></i> Report Card
                 </a>
+                
+                <div class="px-3 pt-3 pb-1 text-uppercase text-muted fw-bold" style="font-size: 0.7rem; letter-spacing: 1px;">Finance</div>
+                <a href="fees.php" class="list-group-item list-group-item-action py-2 px-3 <?php echo (basename($_SERVER['PHP_SELF']) == 'fees.php') ? 'active' : ''; ?>">
+                    <i class="fas fa-rupee-sign text-success me-3 nav-icon"></i> My Fees
+                </a>
 
                 <div class="px-3 pt-3 pb-1 text-uppercase text-muted fw-bold" style="font-size: 0.7rem; letter-spacing: 1px;">Updates</div>
                 <a href="announcements.php" class="list-group-item list-group-item-action py-2 px-3 <?php echo (basename($_SERVER['PHP_SELF']) == 'announcements.php') ? 'active' : ''; ?>">

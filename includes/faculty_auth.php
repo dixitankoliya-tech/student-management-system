@@ -157,6 +157,11 @@ function loginUser($pdo, $user) {
         if (!empty($user['faculty_id'])) {
             // users.faculty_id IS faculty.id, so we can use it directly
             $_SESSION['faculty_db_id'] = (int)$user['faculty_id'];
+            
+            // Load the faculty hierarchical role (dean, coordinator, faculty)
+            $roleStmt = $pdo->prepare("SELECT role FROM faculty WHERE id = ?");
+            $roleStmt->execute([$user['faculty_id']]);
+            $_SESSION['faculty_role'] = $roleStmt->fetchColumn() ?: 'faculty';
         }
     } catch (PDOException $e) {
         // Handle silently

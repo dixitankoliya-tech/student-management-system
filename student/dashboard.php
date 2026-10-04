@@ -36,16 +36,10 @@ $today_classes = $ttStmt->fetchAll();
 
 
 // 1. Overall Attendance
-$attStmt = $pdo->prepare("
-    SELECT 
-        COUNT(CASE WHEN a.status='Present' THEN 1 END) as present_count,
-        COUNT(a.id) as total_days
-    FROM attendance a
-    WHERE a.student_id = ?
-");
-$attStmt->execute([$student_id]);
-$attendance = $attStmt->fetch();
-$overall_attendance_pct = $attendance['total_days'] > 0 ? round(($attendance['present_count'] / $attendance['total_days']) * 100, 2) : 'N/A';
+require_once '../includes/academic_calculator.php';
+$attendance_data = calculateAttendancePercentage($pdo, $student_id);
+$overall_attendance_pct = $attendance_data['total_lectures'] > 0 ? $attendance_data['percentage'] : 'N/A';
+$attendance_status = $attendance_data['status'];
 
 
 // 2. Current Percentage / Performance Score
@@ -177,7 +171,7 @@ include '../includes/student_navbar.php';
 </div>
 
 <div class="row">
-    <!-- Today's Timetable placeholder -->
+    <!-- Today's Timetable -->
     <div class="col-lg-6 mb-4">
         <div class="card border-0 shadow-sm h-100 rounded-3">
             <div class="card-header bg-white py-3 border-0">
@@ -210,7 +204,7 @@ include '../includes/student_navbar.php';
                 <h6 class="m-0 fw-bold text-dark"><i class="fas fa-exclamation-triangle me-2 text-danger"></i> Academic Alerts</h6>
             </div>
             <div class="card-body">
-                <?php if ($overall_attendance_pct !== 'N/A' && $overall_attendance_pct < 75): ?>
+                <?php if ($overall_attendance_pct !== 'N/A' && $attendance_status === 'SHORTAGE'): ?>
                     <div class="alert alert-danger py-2 mb-2">
                         <i class="fas fa-exclamation-circle me-2"></i> Attendance is below the required 75% threshold!
                     </div>

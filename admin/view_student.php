@@ -82,6 +82,9 @@ include '../includes/admin_navbar.php';
         <a href="report_card.php?student_id=<?php echo $student['id']; ?>&semester=<?php echo $semester; ?>" class="btn btn-outline-primary shadow-sm rounded-pill px-3" target="_blank">
             <i class="fas fa-file-invoice me-1"></i> Report Card
         </a>
+        <a href="print_marksheet.php?student_id=<?php echo $student['id']; ?>&year=<?php echo ceil($semester/2); ?>" class="btn btn-outline-dark shadow-sm rounded-pill px-3 fw-bold" target="_blank">
+            <i class="fas fa-file-pdf me-1"></i> Official Marksheet
+        </a>
         <a href="certificate.php?student_id=<?php echo $student['id']; ?>" class="btn btn-outline-warning shadow-sm rounded-pill px-3 text-dark fw-bold" target="_blank">
             <i class="fas fa-certificate me-1"></i> Certificate
         </a>

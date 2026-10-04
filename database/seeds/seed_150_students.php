@@ -739,7 +739,5 @@ if ($testUser2) {
 }
 
 echo "\n========================================\n";
-echo "SEED COMPLETE. You may now test at:\n";
-echo "  Admin:   http://localhost:8000\n";
-echo "  Student: http://localhost:9000\n";
+echo "SEED COMPLETE.\n";
 echo "========================================\n";
