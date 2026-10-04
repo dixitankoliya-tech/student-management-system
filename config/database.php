@@ -42,18 +42,30 @@ define('APP_DEBUG', filter_var(getenv('APP_DEBUG'), FILTER_VALIDATE_BOOLEAN));
 
 // Attempt to connect to MySQL database using PDO
 try {
-    $pdo = new PDO("mysql:host=" . DB_HOST . ";port=" . DB_PORT . ";dbname=" . DB_NAME . ";charset=utf8mb4", DB_USER, DB_PASS);
-    
-    // Set the PDO error mode to exception
-    $pdo->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
-    // Set default fetch mode to associative array
-    $pdo->setAttribute(PDO::ATTR_DEFAULT_FETCH_MODE, PDO::FETCH_ASSOC);
+    $pdoOptions = [
+        PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION,
+        PDO::ATTR_DEFAULT_FETCH_MODE => PDO::FETCH_ASSOC,
+        PDO::ATTR_TIMEOUT => 15,
+    ];
+
+    // Enable TLS for non-localhost connections (required by TiDB Cloud Serverless)
+    if (DB_HOST !== 'localhost' && DB_HOST !== '127.0.0.1') {
+        $pdoOptions[PDO::MYSQL_ATTR_SSL_VERIFY_SERVER_CERT] = false;
+        // Provide CA bundle to force TLS negotiation (needed by some PHP/mysqlnd builds)
+        $caPaths = ['C:/xampp/apache/bin/curl-ca-bundle.crt', 'C:/xampp/php/extras/ssl/cacert.pem', '/etc/ssl/certs/ca-certificates.crt'];
+        foreach ($caPaths as $ca) {
+            if (file_exists($ca)) { $pdoOptions[PDO::MYSQL_ATTR_SSL_CA] = $ca; break; }
+        }
+    }
+
+    $pdo = new PDO("mysql:host=" . DB_HOST . ";port=" . DB_PORT . ";dbname=" . DB_NAME . ";charset=utf8mb4", DB_USER, DB_PASS, $pdoOptions);
     
 } catch(PDOException $e) {
     // Log error securely instead of exposing credentials/paths
     error_log("Database Connection Error: " . $e->getMessage());
     die("ERROR: Could not connect to the database. Please contact the administrator.");
 }
+
 
 /**
  * Log user activity

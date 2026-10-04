@@ -37,8 +37,8 @@ if (empty($prod_host) || empty($prod_user)) {
 }
 
 echo "Migrating data from local MariaDB ($local_db) to TiDB Cloud ($prod_db)...\n";
-echo "Production Host: $prod_host\n";
-echo "Production User: $prod_user\n";
+echo "Production Host: [SET]\n";
+echo "Production User: [SET]\n";
 
 try {
     // Connect to local DB
@@ -47,13 +47,25 @@ try {
     ]);
     echo "Connected to local database.\n";
 
-    // Connect to TiDB
-    $opts = [PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION, PDO::ATTR_TIMEOUT => 15];
+    // Connect to TiDB with TLS (required by TiDB Cloud Serverless)
+    $opts = [
+        PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION,
+        PDO::ATTR_TIMEOUT => 30,
+        PDO::MYSQL_ATTR_SSL_VERIFY_SERVER_CERT => false,
+    ];
+    // Force TLS by providing a CA bundle (mysqlnd needs this to initiate SSL)
+    $caPaths = ['C:/xampp/apache/bin/curl-ca-bundle.crt', 'C:/xampp/php/extras/ssl/cacert.pem'];
+    foreach ($caPaths as $ca) {
+        if (file_exists($ca)) { $opts[PDO::MYSQL_ATTR_SSL_CA] = $ca; break; }
+    }
     $prod_pdo = new PDO("mysql:host=$prod_host;port=$prod_port;dbname=$prod_db;charset=utf8mb4", $prod_user, $prod_pass, $opts);
     echo "Connected to TiDB database.\n";
 
-    // Disable foreign key checks on TiDB for migration
+    // Disable foreign key checks and strict mode on TiDB for migration
+    // MariaDB allows empty ENUM values; TiDB is stricter by default
     $prod_pdo->exec("SET FOREIGN_KEY_CHECKS=0;");
+    $prod_pdo->exec("SET sql_mode='NO_ENGINE_SUBSTITUTION';");
+    $prod_pdo->exec("SET SESSION tidb_skip_utf8_check=1;");
 
     // Fetch all tables from local
     $stmt = $local_pdo->query("SHOW TABLES");

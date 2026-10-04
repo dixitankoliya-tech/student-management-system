@@ -18,3 +18,5 @@ uploads/
 LOCAL_RECOVERY_BACKUP/
 LOCAL_RECOVERY_DATABASE_BACKUP/
 cookies.txt
+
+.vercel
