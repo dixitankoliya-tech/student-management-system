@@ -14,7 +14,7 @@ if (!isDean($pdo, $faculty_id)) {
     die('<div style="text-align:center;padding:60px;"><h1>403 Access Denied</h1></div>');
 }
 
-$students = $pdo->query("SELECT * FROM students WHERE status = 'Active' ORDER BY course, semester, enrollment_no")->fetchAll(PDO::FETCH_ASSOC);
+$students = $pdo->query("SELECT * FROM students ORDER BY course, semester, enrollment_no")->fetchAll(PDO::FETCH_ASSOC);
 
 include '../includes/faculty_header.php';
 include '../includes/faculty_sidebar.php';

@@ -25,7 +25,7 @@ $coordinator_stats = null;
 
 if ($faculty_role === 'dean') {
     $dean_stats = [
-        'total_students' => $pdo->query("SELECT COUNT(*) FROM students WHERE status = 'Active'")->fetchColumn(),
+        'total_students' => $pdo->query("SELECT COUNT(*) FROM students")->fetchColumn(),
         'total_faculty' => $pdo->query("SELECT COUNT(*) FROM faculty WHERE status = 'Active'")->fetchColumn(),
         'total_courses' => $pdo->query("SELECT COUNT(*) FROM courses WHERE status = 'Active'")->fetchColumn(),
         'total_subjects' => $pdo->query("SELECT COUNT(*) FROM subjects")->fetchColumn(),
@@ -35,9 +35,9 @@ if ($faculty_role === 'dean') {
     // Per-course stats
     $dean_stats['courses'] = $pdo->query("
         SELECT c.id, c.course_name, c.course_code, c.total_semesters,
-            (SELECT COUNT(*) FROM students s WHERE s.course = c.course_name AND s.status = 'Active') as student_count,
+            (SELECT COUNT(*) FROM students s WHERE s.course = c.course_name) as student_count,
             (SELECT COUNT(DISTINCT fs.faculty_id) FROM faculty_subjects fs WHERE fs.course = c.course_name) as faculty_count,
-            (SELECT COUNT(*) FROM subjects sub WHERE sub.course_id = c.id) as subject_count
+            (SELECT COUNT(*) FROM subjects sub WHERE sub.course = c.course_name) as subject_count
         FROM courses c WHERE c.status = 'Active' ORDER BY c.course_name
     ")->fetchAll(PDO::FETCH_ASSOC);
 } elseif ($faculty_role === 'coordinator') {
@@ -51,12 +51,12 @@ if ($faculty_role === 'dean') {
         $coordinator_stats = [
             'course_id' => $cid,
             'course_name' => $coord_course_name,
-            'student_count' => $pdo->prepare("SELECT COUNT(*) FROM students WHERE course = ? AND status = 'Active'")->execute([$coord_course_name]) ? $pdo->query("SELECT FOUND_ROWS()")->fetchColumn() : 0,
+            'student_count' => $pdo->prepare("SELECT COUNT(*) FROM students WHERE course = ?")->execute([$coord_course_name]) ? $pdo->query("SELECT FOUND_ROWS()")->fetchColumn() : 0,
             'faculty_count' => 0,
             'subject_count' => 0,
         ];
         // Re-query properly
-        $sc = $pdo->prepare("SELECT COUNT(*) FROM students WHERE course = ? AND status = 'Active'");
+        $sc = $pdo->prepare("SELECT COUNT(*) FROM students WHERE course = ?");
         $sc->execute([$coord_course_name]);
         $coordinator_stats['student_count'] = $sc->fetchColumn();
         
@@ -64,8 +64,8 @@ if ($faculty_role === 'dean') {
         $fc->execute([$coord_course_name]);
         $coordinator_stats['faculty_count'] = $fc->fetchColumn();
         
-        $sbc = $pdo->prepare("SELECT COUNT(*) FROM subjects WHERE course_id = ?");
-        $sbc->execute([$cid]);
+        $sbc = $pdo->prepare("SELECT COUNT(*) FROM subjects WHERE course = ?");
+        $sbc->execute([$coord_course_name]);
         $coordinator_stats['subject_count'] = $sbc->fetchColumn();
     }
 }

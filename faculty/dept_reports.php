@@ -16,13 +16,13 @@ if (!isDean($pdo, $faculty_id)) {
 
 // Analytics Queries
 // A. Student Statistics
-$total_students = $pdo->query("SELECT COUNT(*) FROM students WHERE status = 'Active'")->fetchColumn();
-$alumni_students = $pdo->query("SELECT COUNT(*) FROM students WHERE status = 'Alumni'")->fetchColumn();
+$total_students = $pdo->query("SELECT COUNT(*) FROM students")->fetchColumn();
+$alumni_students = $pdo->query("SELECT COUNT(DISTINCT student_id) FROM student_academic_enrollments WHERE status = 'Alumni'")->fetchColumn();
 
 // Course-wise students
 $course_students = $pdo->query("
     SELECT course, COUNT(*) as count 
-    FROM students WHERE status = 'Active' 
+    FROM students 
     GROUP BY course ORDER BY course
 ")->fetchAll(PDO::FETCH_ASSOC);
 

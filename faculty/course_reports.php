@@ -23,14 +23,14 @@ $course_name = $role_info['coordinated_course_names'][0];
 
 // Analytics Queries Scoped to Course
 // A. Student Statistics
-$stmt = $pdo->prepare("SELECT COUNT(*) FROM students WHERE course = ? AND status = 'Active'");
+$stmt = $pdo->prepare("SELECT COUNT(*) FROM students WHERE course = ?");
 $stmt->execute([$course_name]);
 $total_students = $stmt->fetchColumn();
 
 // Semester-wise students
 $stmt = $pdo->prepare("
     SELECT semester, COUNT(*) as count 
-    FROM students WHERE course = ? AND status = 'Active' 
+    FROM students WHERE course = ?
     GROUP BY semester ORDER BY semester
 ");
 $stmt->execute([$course_name]);

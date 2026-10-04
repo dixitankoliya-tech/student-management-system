@@ -148,7 +148,7 @@ function getAccessibleStudentIds($pdo, $faculty_id) {
     $role_info = getFacultyRoleInfo($pdo, $faculty_id);
     
     if ($role_info['role'] === 'dean') {
-        return $pdo->query("SELECT id FROM students WHERE status = 'Active'")->fetchAll(PDO::FETCH_COLUMN);
+        return $pdo->query("SELECT id FROM students")->fetchAll(PDO::FETCH_COLUMN);
     }
     
     $course_ids = getAccessibleCourseIds($pdo, $faculty_id);

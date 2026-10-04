@@ -17,7 +17,7 @@ require_once '../includes/faculty_role_helper.php';
 if ($filter_subject_id) {
     // If they are dean/coordinator, we might need a broader check, but for now let's allow it 
     // if the subject is part of their accessible courses.
-    $stmt = $pdo->prepare("SELECT course_id FROM subjects WHERE id = ?");
+    $stmt = $pdo->prepare("SELECT c.id FROM subjects s JOIN courses c ON s.course = c.course_name WHERE s.id = ?");
     $stmt->execute([$filter_subject_id]);
     $subj_course_id = $stmt->fetchColumn();
     
