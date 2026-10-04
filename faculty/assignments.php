@@ -3,6 +3,7 @@
  * SMS 2.0: Faculty - Assignments
  */
 require_once '../config/database.php';
+require_once '../includes/file_storage.php';
 require_once '../includes/faculty_auth.php';
 
 requireAuth();
@@ -78,12 +79,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['add_assignment'])) {
                 
                 if (in_array($mime, $allowed_mimes)) {
                     $new_filename = uniqid('assg_') . '.' . $ext;
-                    $target_file = $upload_dir . $new_filename;
+                    $file_path_new = 'uploads/assignments/' . $new_filename;
                     
-                    if (move_uploaded_file($_FILES['attachment']['tmp_name'], $target_file)) {
-                        $attachment_path = 'uploads/assignments/' . $new_filename;
+                    if (store_file_in_db($_FILES['attachment']['tmp_name'], $file_path_new, $_FILES['attachment']['name'], $mime, $_FILES['attachment']['size'], $pdo)) {
+                        $attachment_path = $file_path_new;
                     } else {
-                        $error = "Failed to move uploaded file.";
+                        $error = "Failed to store uploaded file in database.";
                     }
                 } else {
                     $error = "Invalid file type detected (MIME mismatch).";
@@ -134,8 +135,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['delete_assignment']))
     if ($assg) {
         try {
             $pdo->prepare("DELETE FROM assignments WHERE id = ?")->execute([$assg_id]);
-            if ($assg['attachment_path'] && file_exists('../' . $assg['attachment_path'])) {
-                unlink('../' . $assg['attachment_path']);
+            if ($assg['attachment_path']) {
+                delete_file_from_db($assg['attachment_path'], $pdo);
             }
             $success = "Assignment deleted.";
         } catch (PDOException $e) {

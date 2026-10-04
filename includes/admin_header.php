@@ -29,7 +29,7 @@
         }
     </script>
     <!-- Custom CSS -->
-    <link rel="stylesheet" href="../assets/css/style.css">
+    <link rel="stylesheet" href="/assets/css/style.css">
 </head>
 <body>
     <div class="d-flex" id="wrapper">

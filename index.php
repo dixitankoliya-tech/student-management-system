@@ -14,25 +14,25 @@ $hostWithoutPort = preg_replace('/:\d+$/', '', $host);
 
 // === HOSTNAME-BASED ROUTING (Production) ===
 if (preg_match('/^admin\./', $hostWithoutPort)) {
-    header("Location: /admin/");
+    header("Location: admin/");
     exit;
 } elseif (preg_match('/^student\./', $hostWithoutPort)) {
-    header("Location: /student/");
+    header("Location: student/");
     exit;
 } elseif (preg_match('/^faculty\./', $hostWithoutPort)) {
-    header("Location: /faculty/");
+    header("Location: faculty/");
     exit;
 }
 
 // === PORT-BASED ROUTING (Local development) ===
 if ($port == 8000) {
-    header("Location: /admin/");
+    header("Location: admin/");
     exit;
 } elseif ($port == 9100) {
-    header("Location: /faculty/");
+    header("Location: faculty/");
     exit;
 } elseif ($port == 9000) {
-    header("Location: /student/");
+    header("Location: student/");
     exit;
 }
 
@@ -154,7 +154,7 @@ if ($port == 8000) {
         </div>
         <div class="row g-4">
             <div class="col-md-4">
-                <a href="/admin/login.php" class="portal-card">
+                <a href="admin/login.php" class="portal-card">
                     <div class="icon-wrap admin-icon">
                         <i class="fas fa-user-shield"></i>
                     </div>
@@ -163,7 +163,7 @@ if ($port == 8000) {
                 </a>
             </div>
             <div class="col-md-4">
-                <a href="/student/login.php" class="portal-card">
+                <a href="student/login.php" class="portal-card">
                     <div class="icon-wrap student-icon">
                         <i class="fas fa-user-graduate"></i>
                     </div>
@@ -172,7 +172,7 @@ if ($port == 8000) {
                 </a>
             </div>
             <div class="col-md-4">
-                <a href="/faculty/login.php" class="portal-card">
+                <a href="faculty/login.php" class="portal-card">
                     <div class="icon-wrap faculty-icon">
                         <i class="fas fa-chalkboard-teacher"></i>
                     </div>

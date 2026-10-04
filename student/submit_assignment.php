@@ -3,6 +3,7 @@
  * SMS 2.0: Student Submit Assignment
  */
 require_once '../config/database.php';
+require_once '../includes/file_storage.php';
 require_once '../includes/student_auth.php';
 requireRole('student');
 
@@ -88,14 +89,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['submit_assignment']))
                 
                 if (in_array($mime, $allowed_mimes)) {
                     $new_filename = 'sub_' . $assignment_id . '_' . $student_id . '_' . time() . '.' . $ext;
-                    $target_file = $upload_dir . $new_filename;
+                    $file_path_new = 'uploads/submissions/' . $new_filename;
                     
-                    if (move_uploaded_file($_FILES['submission_file']['tmp_name'], $target_file)) {
-                        // Delete old file if updating
-                        if ($file_path && file_exists('../' . $file_path)) {
-                            unlink('../' . $file_path);
-                        }
-                        $file_path = 'uploads/submissions/' . $new_filename;
+                    if (store_file_in_db($_FILES['submission_file']['tmp_name'], $file_path_new, $_FILES['submission_file']['name'], $mime, $_FILES['submission_file']['size'], $pdo)) {
+                        // DB storage handles overwrites naturally via delete_file_from_db inside store_file_in_db
+                        $file_path = $file_path_new;
                     } else {
                         $error = "Failed to move uploaded file.";
                     }

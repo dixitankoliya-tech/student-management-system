@@ -18,21 +18,10 @@ $uri = str_replace(['../', '..\\'], '', $uri);
 // Strip the leading slash for local filesystem lookup
 $path = ltrim($uri, '/');
 
-// Detect hostname for subdomain-based portal routing
-$host = $_SERVER['HTTP_HOST'] ?? $_SERVER['SERVER_NAME'] ?? '';
-$host = strtolower(preg_replace('/:\d+$/', '', $host)); // remove port if present
+// Detect portal from environment variable
+$portalFromHost = getenv('PORTAL') ?: '';
 
-// Determine portal from hostname
-$portalFromHost = '';
-if (preg_match('/^admin\./', $host)) {
-    $portalFromHost = 'admin';
-} elseif (preg_match('/^student\./', $host)) {
-    $portalFromHost = 'student';
-} elseif (preg_match('/^faculty\./', $host)) {
-    $portalFromHost = 'faculty';
-}
-
-// If accessed via a subdomain AND the path doesn't already start with the portal prefix,
+// If PORTAL is set AND the path doesn't already start with the portal prefix,
 // prepend the portal directory so the correct files are served
 if ($portalFromHost !== '') {
     // Check if path already starts with the portal name

@@ -3,6 +3,7 @@
  * SMS 2.0: Faculty - Study Materials Management
  */
 require_once '../config/database.php';
+require_once '../includes/file_storage.php';
 require_once '../includes/faculty_auth.php';
 
 requireAuth();
@@ -71,11 +72,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     $error = "Invalid file type. Allowed: " . implode(', ', $allowed);
                 } else {
                     $file_name = time() . '_' . preg_replace("/[^a-zA-Z0-9\.\-_]/", "", $name);
-                    if (move_uploaded_file($tmp_name, $upload_dir . $file_name)) {
-                        $file_path = 'uploads/study_materials/' . $file_name;
+                    $file_path_new = 'uploads/study_materials/' . $file_name;
+                    if (store_file_in_db($tmp_name, $file_path_new, $name, $_FILES['file']['type'], $_FILES['file']['size'], $pdo)) {
+                        $file_path = $file_path_new;
                         $file_type = $_FILES['file']['type'];
                     } else {
-                        $error = "Failed to upload file.";
+                        $error = "Failed to upload file to database.";
                     }
                 }
             }
@@ -120,8 +122,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $material = $checkStmt->fetch();
             
             if ($material) {
-                if ($material['file_path'] && file_exists('../' . $material['file_path'])) {
-                    unlink('../' . $material['file_path']);
+                if ($material['file_path']) {
+                    delete_file_from_db($material['file_path'], $pdo);
                 }
                 
                 $delStmt = $pdo->prepare("DELETE FROM study_materials WHERE id = ?");
