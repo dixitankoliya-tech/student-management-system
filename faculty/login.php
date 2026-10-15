@@ -343,6 +343,116 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['login'])) {
         .toggle-password:hover {
             color: #94a3b8;
         }
+    
+        /* Faculty Evaluation Demo Credentials Card */
+        .demo-credentials-card {
+            background: rgba(15, 23, 42, 0.75);
+            border: 1px solid rgba(59, 130, 246, 0.3);
+            border-radius: 0.85rem;
+            padding: 1rem 1.15rem;
+            margin-top: 1.25rem;
+            box-shadow: 0 4px 14px rgba(0, 0, 0, 0.25);
+            text-align: left;
+        }
+        .demo-card-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 0.65rem;
+            flex-wrap: wrap;
+            gap: 0.35rem;
+        }
+        .demo-card-title {
+            font-size: 0.85rem;
+            font-weight: 700;
+            color: #93c5fd;
+            display: flex;
+            align-items: center;
+            gap: 0.4rem;
+            margin: 0;
+        }
+        .demo-card-badge {
+            background: rgba(59, 130, 246, 0.15);
+            color: #60a5fa;
+            border: 1px solid rgba(59, 130, 246, 0.3);
+            font-size: 0.68rem;
+            padding: 0.2rem 0.5rem;
+            border-radius: 9999px;
+            font-weight: 600;
+            letter-spacing: 0.02em;
+        }
+        .demo-cred-row {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            background: rgba(30, 41, 59, 0.65);
+            border: 1px solid rgba(255, 255, 255, 0.06);
+            border-radius: 0.5rem;
+            padding: 0.4rem 0.65rem;
+            margin-bottom: 0.45rem;
+            font-size: 0.825rem;
+        }
+        .demo-cred-label {
+            color: #94a3b8;
+            font-size: 0.78rem;
+            font-weight: 500;
+        }
+        .demo-cred-val {
+            font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+            font-weight: 700;
+            color: #f1f5f9;
+            letter-spacing: 0.04em;
+        }
+        .btn-copy-cred {
+            background: rgba(59, 130, 246, 0.12);
+            border: 1px solid rgba(59, 130, 246, 0.25);
+            color: #93c5fd;
+            padding: 0.2rem 0.55rem;
+            border-radius: 0.375rem;
+            font-size: 0.72rem;
+            font-weight: 600;
+            transition: all 0.2s ease;
+            cursor: pointer;
+            display: inline-flex;
+            align-items: center;
+            gap: 0.3rem;
+        }
+        .btn-copy-cred:hover {
+            background: rgba(59, 130, 246, 0.25);
+            color: #ffffff;
+            border-color: rgba(59, 130, 246, 0.5);
+            transform: translateY(-1px);
+        }
+        .btn-autofill-cred {
+            width: 100%;
+            background: linear-gradient(135deg, rgba(59, 130, 246, 0.18), rgba(37, 99, 235, 0.22));
+            border: 1px solid rgba(59, 130, 246, 0.35);
+            color: #bfdbfe;
+            font-size: 0.75rem;
+            font-weight: 600;
+            padding: 0.35rem 0.6rem;
+            border-radius: 0.45rem;
+            margin-top: 0.2rem;
+            margin-bottom: 0.55rem;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 0.35rem;
+        }
+        .btn-autofill-cred:hover {
+            background: linear-gradient(135deg, rgba(59, 130, 246, 0.3), rgba(37, 99, 235, 0.35));
+            color: #ffffff;
+            border-color: rgba(59, 130, 246, 0.6);
+        }
+        .demo-card-note {
+            font-size: 0.73rem;
+            color: #94a3b8;
+            line-height: 1.4;
+            margin-top: 0.35rem;
+            text-align: center;
+        }
     </style>
 </head>
 <body>
@@ -386,6 +496,47 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['login'])) {
                     <i class="fas fa-sign-in-alt me-2"></i>Sign In
                 </button>
             </form>
+            <!-- Faculty Evaluation Demo Credentials Card -->
+            <div class="demo-credentials-card" id="demoCredentialsCard">
+                <div class="demo-card-header">
+                    <div class="demo-card-title">
+                        <i class="fas fa-id-badge text-primary"></i>
+                        <span>Demo Login Credentials</span>
+                    </div>
+                    <span class="demo-card-badge">For Faculty Evaluation Only</span>
+                </div>
+                
+                <div class="demo-cred-row">
+                    <div>
+                        <span class="demo-cred-label">Login ID:</span>
+                        <span class="demo-cred-val ms-1" id="demoUser">FAC-FCAIT-001</span>
+                    </div>
+                    <button type="button" class="btn-copy-cred" onclick="copyCred('FAC-FCAIT-001', this)" aria-label="Copy Login ID">
+                        <i class="fas fa-copy"></i>
+                        <span>Copy</span>
+                    </button>
+                </div>
+                
+                <div class="demo-cred-row">
+                    <div>
+                        <span class="demo-cred-label">Password:</span>
+                        <span class="demo-cred-val ms-1" id="demoPass">faculty123</span>
+                    </div>
+                    <button type="button" class="btn-copy-cred" onclick="copyCred('faculty123', this)" aria-label="Copy Password">
+                        <i class="fas fa-copy"></i>
+                        <span>Copy</span>
+                    </button>
+                </div>
+                
+                <button type="button" class="btn-autofill-cred" onclick="fillDemoCreds()" title="Click to automatically fill login form">
+                    <i class="fas fa-magic"></i>
+                    <span>Auto-Fill Demo Credentials</span>
+                </button>
+                
+                <p class="demo-card-note mb-0">
+                    These demo credentials are provided for academic project evaluation. Please use them to explore the available features.
+                </p>
+            </div>
             
             <div class="login-footer">
                 <i class="fas fa-shield-halved me-1"></i> Protected by Session Authentication
@@ -406,6 +557,51 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['login'])) {
                 passwordInput.type = 'password';
                 toggleIcon.classList.remove('fa-eye-slash');
                 toggleIcon.classList.add('fa-eye');
+            }
+        }
+    
+        function copyCred(text, btn) {
+            const copySuccess = function() {
+                const originalHtml = btn.innerHTML;
+                btn.innerHTML = '<i class="fas fa-check text-success"></i><span>Copied!</span>';
+                setTimeout(function() {
+                    btn.innerHTML = originalHtml;
+                }, 1600);
+            };
+
+            if (navigator.clipboard && window.isSecureContext) {
+                navigator.clipboard.writeText(text).then(copySuccess).catch(function() {
+                    fallbackCopy(text, copySuccess);
+                });
+            } else {
+                fallbackCopy(text, copySuccess);
+            }
+        }
+
+        function fallbackCopy(text, callback) {
+            const textArea = document.createElement("textarea");
+            textArea.value = text;
+            textArea.style.position = "fixed";
+            textArea.style.opacity = "0";
+            document.body.appendChild(textArea);
+            textArea.focus();
+            textArea.select();
+            try {
+                document.execCommand('copy');
+                callback();
+            } catch (err) {
+                console.error('Fallback copy failed', err);
+            }
+            document.body.removeChild(textArea);
+        }
+
+        function fillDemoCreds() {
+            const userInput = document.getElementById('login_id');
+            const passInput = document.getElementById('password');
+            if (userInput && passInput) {
+                userInput.value = 'FAC-FCAIT-001';
+                passInput.value = 'faculty123';
+                userInput.focus();
             }
         }
     </script>

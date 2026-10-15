@@ -37,14 +37,19 @@ $total_records = 0;
 $total_pages = 1;
 
 try {
-    $cntStmt = $pdo->prepare("
-        SELECT COUNT(*) 
-        FROM activity_logs al 
-        LEFT JOIN students s ON al.student_id = s.id 
-        $whereClause
-    ");
-    $cntStmt->execute($params);
-    $total_records = (int)$cntStmt->fetchColumn();
+    if (empty($whereClause)) {
+        $cntStmt = $pdo->query("SELECT COUNT(*) FROM activity_logs");
+        $total_records = (int)$cntStmt->fetchColumn();
+    } else {
+        $cntStmt = $pdo->prepare("
+            SELECT COUNT(*) 
+            FROM activity_logs al 
+            LEFT JOIN students s ON al.student_id = s.id 
+            $whereClause
+        ");
+        $cntStmt->execute($params);
+        $total_records = (int)$cntStmt->fetchColumn();
+    }
     $total_pages = max(1, ceil($total_records / $limit));
 
     $sql = "

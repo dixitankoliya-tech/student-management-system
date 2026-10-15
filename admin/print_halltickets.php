@@ -9,7 +9,31 @@ requireAuth();
 
 $exam_id = isset($_GET['exam_id']) ? (int)$_GET['exam_id'] : 0;
 if (!$exam_id) {
-    die("Invalid Examination.");
+    // Prefer an exam that already has schedules configured
+    $exam_id = (int)$pdo->query("
+        SELECT e.id FROM examinations e 
+        JOIN exam_schedules es ON e.id = es.exam_id 
+        GROUP BY e.id LIMIT 1
+    ")->fetchColumn();
+    if (!$exam_id) {
+        $exam_id = (int)$pdo->query("SELECT id FROM examinations ORDER BY id ASC LIMIT 1")->fetchColumn();
+    }
+}
+if (!$exam_id) {
+    ?>
+    <!DOCTYPE html>
+    <html lang="en">
+    <head><meta charset="UTF-8"><title>Hall Tickets</title><link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet"></head>
+    <body class="bg-light p-5 text-center">
+        <div class="card p-5 shadow-sm mx-auto" style="max-width: 500px;">
+            <h4>No Examination Found</h4>
+            <p class="text-muted">No examination record exists to generate hall tickets.</p>
+            <a href="examinations.php" class="btn btn-primary mt-2">Back to Examinations</a>
+        </div>
+    </body>
+    </html>
+    <?php
+    exit();
 }
 
 // Fetch Examination Details
@@ -17,7 +41,20 @@ $stmt = $pdo->prepare("SELECT * FROM examinations WHERE id = ?");
 $stmt->execute([$exam_id]);
 $exam = $stmt->fetch();
 if (!$exam) {
-    die("Examination not found.");
+    ?>
+    <!DOCTYPE html>
+    <html lang="en">
+    <head><meta charset="UTF-8"><title>Hall Tickets</title><link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet"></head>
+    <body class="bg-light p-5 text-center">
+        <div class="card p-5 shadow-sm mx-auto" style="max-width: 500px;">
+            <h4>Examination Not Found</h4>
+            <p class="text-muted">The requested examination record does not exist.</p>
+            <a href="examinations.php" class="btn btn-primary mt-2">Back to Examinations</a>
+        </div>
+    </body>
+    </html>
+    <?php
+    exit();
 }
 
 // Fetch Schedules
@@ -32,7 +69,20 @@ $stmt->execute([$exam_id]);
 $schedules = $stmt->fetchAll();
 
 if (empty($schedules)) {
-    die("No timetable configured for this examination. Please configure the timetable first.");
+    ?>
+    <!DOCTYPE html>
+    <html lang="en">
+    <head><meta charset="UTF-8"><title>Hall Tickets</title><link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet"></head>
+    <body class="bg-light p-5 text-center">
+        <div class="card p-5 shadow-sm mx-auto" style="max-width: 500px;">
+            <h4>Timetable Not Configured</h4>
+            <p class="text-muted">No timetable has been configured for this examination yet.</p>
+            <a href="examinations.php" class="btn btn-primary mt-2">Back to Examinations</a>
+        </div>
+    </body>
+    </html>
+    <?php
+    exit();
 }
 
 // Fetch active students for this course and semester

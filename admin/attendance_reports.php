@@ -18,7 +18,10 @@ $export = isset($_GET['export']) ? $_GET['export'] : '';
 $courses = $pdo->query("SELECT DISTINCT course FROM students ORDER BY course")->fetchAll(PDO::FETCH_COLUMN);
 
 $report_data = [];
-if ($course && $semester) {
+$error = '';
+if ($start_date && $end_date && $start_date > $end_date) {
+    $error = 'Start date cannot be after end date.';
+} elseif ($course && $semester) {
     // Generate the report: group by student, count total sessions, present, absent, leave, calculate percentage
     $sql = "
         SELECT 
@@ -31,17 +34,21 @@ if ($course && $semester) {
         JOIN student_academic_enrollments sae ON s.id = sae.student_id AND sae.status = 'Active'
         LEFT JOIN attendance a ON s.id = a.student_id AND a.attendance_date BETWEEN ? AND ?
         WHERE sae.course = ? AND sae.semester = ?
-        GROUP BY s.id
+        GROUP BY s.id, s.enrollment_no, s.first_name, s.last_name, sae.division
         ORDER BY s.enrollment_no ASC
     ";
-    $stmt = $pdo->prepare($sql);
-    $stmt->execute([$start_date, $end_date, $course, $semester]);
-    $report_data = $stmt->fetchAll(PDO::FETCH_ASSOC);
+    try {
+        $stmt = $pdo->prepare($sql);
+        $stmt->execute([$start_date, $end_date, $course, $semester]);
+        $report_data = $stmt->fetchAll(PDO::FETCH_ASSOC);
+    } catch (PDOException $e) {
+        $error = 'Failed to generate attendance report. Please check query parameters.';
+    }
 }
 
-if ($export === 'csv' && count($report_data) > 0) {
+if ($export === 'csv' && count($report_data) > 0 && empty($error)) {
     header('Content-Type: text/csv');
-    header('Content-Disposition: attachment; filename="Attendance_Report_'.$course.'_Sem'.$semester.'_'.date('Ymd').'.csv"');
+    header('Content-Disposition: attachment; filename="Attendance_Report_'.str_replace(' ', '_', $course).'_Sem'.$semester.'_'.date('Ymd').'.csv"');
     $output = fopen('php://output', 'w');
     fputcsv($output, ['Enrollment No', 'Student Name', 'Division', 'Total Sessions', 'Present', 'Absent', 'Leave', 'Percentage']);
     foreach ($report_data as $row) {
@@ -62,17 +69,29 @@ if ($export === 'csv' && count($report_data) > 0) {
 }
 
 include '../includes/admin_header.php';
+include '../includes/admin_sidebar.php';
+include '../includes/admin_navbar.php';
 ?>
-<div class="d-flex" id="wrapper">
-    <?php include '../includes/admin_sidebar.php'; ?>
-    <div id="page-content-wrapper" class="w-100 bg-light">
-        <?php include '../includes/admin_navbar.php'; ?>
-        <div class="container-fluid py-4 px-4">
-            
-            <div class="mb-4">
-                <h2 class="h3 mb-0 text-gray-800 fw-bold">Attendance Reports</h2>
-                <p class="text-muted mb-0">Generate aggregate attendance analytics by class</p>
-            </div>
+
+<!-- Breadcrumb -->
+<nav aria-label="breadcrumb" class="mb-3">
+    <ol class="breadcrumb">
+        <li class="breadcrumb-item"><a href="dashboard.php">Dashboard</a></li>
+        <li class="breadcrumb-item active">Attendance Reports</li>
+    </ol>
+</nav>
+
+<div class="mb-4">
+    <h2 class="h3 mb-0 text-gray-800 fw-bold"><i class="fas fa-chart-line me-2 text-primary"></i>Attendance Reports</h2>
+    <p class="text-muted mb-0">Generate aggregate attendance analytics by class</p>
+</div>
+
+<?php if ($error): ?>
+    <div class="alert alert-danger alert-dismissible fade show rounded-3 shadow-sm mb-4">
+        <i class="fas fa-exclamation-circle me-2"></i><?= htmlspecialchars($error) ?>
+        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+    </div>
+<?php endif; ?>
 
             <div class="card border-0 shadow-sm rounded-4 mb-4">
                 <div class="card-body p-4">
@@ -174,7 +193,4 @@ include '../includes/admin_header.php';
             </div>
             <?php endif; ?>
 
-        </div>
-    </div>
-</div>
 <?php include '../includes/footer.php'; ?>

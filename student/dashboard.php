@@ -8,8 +8,15 @@ requireRole('student');
 
 $student_id = $_SESSION['student_id'];
 
-// Fetch student data
-$stmt = $pdo->prepare("SELECT * FROM students WHERE id = ?");
+// Fetch student data with active academic year in a single query
+$stmt = $pdo->prepare("
+    SELECT s.*, sae.academic_year as enrollment_academic_year
+    FROM students s
+    LEFT JOIN student_academic_enrollments sae ON s.id = sae.student_id AND sae.status = 'Active'
+    WHERE s.id = ?
+    ORDER BY sae.academic_year DESC
+    LIMIT 1
+");
 $stmt->execute([$student_id]);
 $student = $stmt->fetch();
 
@@ -18,15 +25,7 @@ if (!$student) {
     exit();
 }
 
-// Timetable
-// Fetch active enrollment to determine academic year
-$enrStmt = $pdo->prepare("SELECT academic_year FROM student_academic_enrollments WHERE student_id = ? AND status = 'Active' ORDER BY academic_year DESC LIMIT 1");
-$enrStmt->execute([$student_id]);
-$student['academic_year'] = $enrStmt->fetchColumn();
-
-if (!$student['academic_year']) {
-    $student['academic_year'] = date('Y') . '-' . (date('Y') + 1);
-}
+$student['academic_year'] = $student['enrollment_academic_year'] ?: (date('Y') . '-' . (date('Y') + 1));
 
 // Timetable
 $today = date('l');
@@ -46,9 +45,24 @@ $attendance_status = $attendance_data['status'];
 $perfStmt = $pdo->prepare("SELECT * FROM academic_performance WHERE student_id = ? ORDER BY semester DESC LIMIT 1");
 $perfStmt->execute([$student_id]);
 $perf = $perfStmt->fetch();
-$current_sgpa = $perf['performance_score'] ?? 'N/A';
-$current_cgpa = $perf['grade'] ?? 'N/A';
-$current_percentage = $perf['overall_percentage'] ?? 'N/A';
+
+if ($perf) {
+    $current_sgpa = is_numeric($perf['performance_score']) ? number_format($perf['performance_score'], 2) : $perf['performance_score'];
+    $current_cgpa = $perf['grade'] ?? 'N/A';
+    $current_percentage = is_numeric($perf['overall_percentage']) ? number_format($perf['overall_percentage'], 1) . '%' : $perf['overall_percentage'];
+} else {
+    $cgpa_data = calculateStudentCGPA($pdo, $student_id);
+    $current_cgpa = $cgpa_data['cgpa'] > 0 ? number_format($cgpa_data['cgpa'], 2) : 'N/A';
+    $sem_results = $cgpa_data['semester_results'] ?? [];
+    if (!empty($sem_results)) {
+        $latest_sem = max(array_keys($sem_results));
+        $current_sgpa = number_format($sem_results[$latest_sem]['sgpa'], 2);
+        $current_percentage = number_format($sem_results[$latest_sem]['overall_percentage'], 1) . '%';
+    } else {
+        $current_sgpa = 'N/A';
+        $current_percentage = 'N/A';
+    }
+}
 
 
 // 3. Upcoming Exams

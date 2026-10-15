@@ -1,3 +1,4 @@
 <?php
-// Proxy to the central file serving logic
+// Student portal file serving endpoint
+$portalContext = 'student';
 require_once __DIR__ . '/../includes/serve_file.php';

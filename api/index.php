@@ -13,13 +13,26 @@
 $uri = parse_url($_SERVER['REQUEST_URI'], PHP_URL_PATH);
 
 // Prevent directory traversal attacks
-$uri = str_replace(['../', '..\\'], '', $uri);
+while (strpos($uri, '../') !== false || strpos($uri, '..\\') !== false) {
+    $uri = str_replace(['../', '..\\'], '', $uri);
+}
 
 // Strip the leading slash for local filesystem lookup
 $path = ltrim($uri, '/');
 
-// Detect portal from environment variable
+// Detect portal from environment variable, server port, or hostname
 $portalFromHost = getenv('PORTAL') ?: '';
+if (!$portalFromHost) {
+    $serverPort = (string)($_SERVER['SERVER_PORT'] ?? '');
+    $httpHost = strtolower($_SERVER['HTTP_HOST'] ?? '');
+    if ($serverPort === '8000' || str_starts_with($httpHost, 'admin.')) {
+        $portalFromHost = 'admin';
+    } elseif ($serverPort === '9000' || str_starts_with($httpHost, 'student.')) {
+        $portalFromHost = 'student';
+    } elseif ($serverPort === '9100' || str_starts_with($httpHost, 'faculty.')) {
+        $portalFromHost = 'faculty';
+    }
+}
 
 // If PORTAL is set AND the path doesn't already start with the portal prefix,
 // prepend the portal directory so the correct files are served
@@ -50,11 +63,20 @@ if (strpos($path, 'api/') === 0) {
     die('403 Forbidden');
 }
 
-// Security: Do not allow serving .env, .git, or other sensitive files
+// Security: Do not allow serving sensitive configuration, migrations, or internal scripts
 $basename = basename($path);
-if (in_array($basename, ['.env', '.env.local', '.env.example', '.gitignore'])
-    || strpos($path, '.git/') === 0
-    || strpos($path, 'config/') === 0 && !str_ends_with($path, '.php')) {
+$ext = strtolower(pathinfo($path, PATHINFO_EXTENSION));
+$blockedExtensions = ['env', 'sql', 'json', 'yaml', 'yml', 'md', 'lock', 'log'];
+$blockedFiles = ['migrate_to_tidb.php', 'dockerfile', 'render.yaml', 'vercel.json', '.gitattributes', '.gitignore'];
+
+if (str_starts_with($basename, '.env')
+    || in_array(strtolower($basename), $blockedFiles)
+    || in_array($ext, $blockedExtensions)
+    || strpos($path, '.git') !== false
+    || strpos($path, 'config/') === 0
+    || strpos($path, 'scripts/') === 0
+    || strpos($path, 'LOCAL_RECOVERY') !== false
+    || str_starts_with($basename, 'scratch_')) {
     http_response_code(403);
     die('403 Forbidden');
 }

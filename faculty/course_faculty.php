@@ -9,17 +9,20 @@ require_once '../includes/faculty_role_helper.php';
 requireAuth();
 $faculty_id = $_SESSION['faculty_db_id']; 
 
-if (!isCoordinator($pdo, $faculty_id)) {
+if (!isCoordinator($pdo, $faculty_id) && !isDean($pdo, $faculty_id)) {
     http_response_code(403);
     die('<div style="text-align:center;padding:60px;"><h1>403 Access Denied</h1></div>');
 }
 
 $role_info = getFacultyRoleInfo($pdo, $faculty_id);
-if (empty($role_info['coordinated_course_names'])) {
-    die("No course assigned.");
+if (isDean($pdo, $faculty_id)) {
+    $course_name = $_GET['course'] ?? ($role_info['coordinated_course_names'][0] ?? $pdo->query("SELECT course_name FROM courses WHERE status = 'Active' ORDER BY course_name LIMIT 1")->fetchColumn());
+} else {
+    if (empty($role_info['coordinated_course_names'])) {
+        die("No course assigned.");
+    }
+    $course_name = $role_info['coordinated_course_names'][0];
 }
-
-$course_name = $role_info['coordinated_course_names'][0];
 
 // Fetch all faculty assigned to this course through faculty_subjects
 $stmt = $pdo->prepare("

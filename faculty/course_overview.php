@@ -9,18 +9,23 @@ require_once '../includes/faculty_role_helper.php';
 requireAuth();
 $faculty_id = $_SESSION['faculty_db_id']; 
 
-if (!isCoordinator($pdo, $faculty_id)) {
+if (!isCoordinator($pdo, $faculty_id) && !isDean($pdo, $faculty_id)) {
     http_response_code(403);
     die('<div style="text-align:center;padding:60px;"><h1>403 Access Denied</h1></div>');
 }
 
 $role_info = getFacultyRoleInfo($pdo, $faculty_id);
-if (empty($role_info['coordinated_courses'])) {
-    die("No course assigned.");
+if (isDean($pdo, $faculty_id)) {
+    $firstCourse = $pdo->query("SELECT id, course_name FROM courses WHERE status = 'Active' ORDER BY course_name LIMIT 1")->fetch(PDO::FETCH_ASSOC);
+    $course_id = $firstCourse['id'];
+    $course_name = $firstCourse['course_name'];
+} else {
+    if (empty($role_info['coordinated_courses'])) {
+        die("No course assigned.");
+    }
+    $course_id = $role_info['coordinated_courses'][0];
+    $course_name = $role_info['coordinated_course_names'][0];
 }
-
-$course_id = $role_info['coordinated_courses'][0];
-$course_name = $role_info['coordinated_course_names'][0];
 
 $stmt = $pdo->prepare("SELECT * FROM courses WHERE id = ?");
 $stmt->execute([$course_id]);

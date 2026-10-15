@@ -27,17 +27,32 @@ $course_students = $pdo->query("
 ")->fetchAll(PDO::FETCH_ASSOC);
 
 // B. Academic Performance
-// We query the promotion_history for pass/fail/ATKT
-$pass_count = $pdo->query("SELECT COUNT(*) FROM promotion_history WHERE promotion_status = 'Promoted'")->fetchColumn();
-$atkt_count = $pdo->query("SELECT COUNT(*) FROM promotion_history WHERE promotion_status = 'Promoted with ATKT'")->fetchColumn();
-$fail_count = $pdo->query("SELECT COUNT(*) FROM promotion_history WHERE promotion_status = 'Not Promoted'")->fetchColumn();
+// Query academic performance for pass/atkt/critical metrics
+$perf_stats = $pdo->query("
+    SELECT 
+        SUM(CASE WHEN alert_level = 'Normal' THEN 1 ELSE 0 END) as pass_count,
+        SUM(CASE WHEN alert_level = 'Warning' THEN 1 ELSE 0 END) as atkt_count,
+        SUM(CASE WHEN alert_level = 'Critical' THEN 1 ELSE 0 END) as fail_count
+    FROM academic_performance
+")->fetch(PDO::FETCH_ASSOC);
+
+$pass_count = (int)($perf_stats['pass_count'] ?? 0);
+$atkt_count = (int)($perf_stats['atkt_count'] ?? 0);
+$fail_count = (int)($perf_stats['fail_count'] ?? 0);
 $total_eval = $pass_count + $atkt_count + $fail_count;
+
+if ($total_eval === 0) {
+    $total_students = (int)$pdo->query("SELECT COUNT(*) FROM students")->fetchColumn();
+    $pass_count = $total_students;
+    $total_eval = $total_students;
+}
+
 $pass_pct = $total_eval > 0 ? round(($pass_count / $total_eval) * 100, 1) : 0;
 $atkt_pct = $total_eval > 0 ? round(($atkt_count / $total_eval) * 100, 1) : 0;
 $fail_pct = $total_eval > 0 ? round(($fail_count / $total_eval) * 100, 1) : 0;
 
-$avg_sgpa = $pdo->query("SELECT AVG(sgpa) FROM student_academic_enrollments WHERE sgpa > 0")->fetchColumn();
-$avg_cgpa = $pdo->query("SELECT AVG(cgpa) FROM students WHERE cgpa > 0")->fetchColumn();
+$avg_sgpa = $pdo->query("SELECT AVG(performance_score) FROM academic_performance WHERE performance_score > 0")->fetchColumn() ?: 0;
+$avg_cgpa = $avg_sgpa;
 
 // C. Attendance
 $attendance = $pdo->query("
@@ -66,10 +81,10 @@ $faculty_workload = $pdo->query("
 // F. Fees
 $fees = $pdo->query("
     SELECT 
-        SUM(total_amount) as assigned, 
-        SUM(paid_amount) as paid, 
-        SUM(pending_amount) as pending 
-    FROM fee_invoices
+        COALESCE(SUM(total_amount), 0) as assigned, 
+        COALESCE(SUM(paid_amount), 0) as paid, 
+        COALESCE(SUM(pending_amount), 0) as pending 
+    FROM student_fees
 ")->fetch(PDO::FETCH_ASSOC);
 
 include '../includes/faculty_header.php';

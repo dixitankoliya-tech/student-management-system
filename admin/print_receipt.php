@@ -4,11 +4,14 @@ require_once '../includes/admin_auth.php';
 
 requireRole('admin');
 
-if (!isset($_GET['id'])) {
-    die("Receipt ID not provided.");
+$id = (int)($_GET['id'] ?? $_GET['payment_id'] ?? 0);
+if (!$id) {
+    $id = (int)$pdo->query("SELECT id FROM fee_payments ORDER BY id ASC LIMIT 1")->fetchColumn();
 }
 
-$id = (int)$_GET['id'];
+if (!$id) {
+    die("Receipt ID not provided.");
+}
 
 $stmt = $pdo->prepare("
     SELECT fp.*, s.first_name, s.last_name, s.enrollment_no, s.course, s.semester as stu_sem, s.admission_year, 
@@ -99,8 +102,12 @@ if (!$receipt) {
             <div class="col-6">
                 <p class="mb-1"><strong>Amount in words:</strong></p>
                 <p class="text-muted fst-italic">Rupees <?php 
-                    $f = new NumberFormatter("en", NumberFormatter::SPELLOUT);
-                    echo ucwords($f->format($receipt['amount']));
+                    if (class_exists('NumberFormatter')) {
+                        $f = new NumberFormatter("en", NumberFormatter::SPELLOUT);
+                        echo ucwords($f->format($receipt['amount']));
+                    } else {
+                        echo number_format($receipt['amount'], 2);
+                    }
                 ?> Only</p>
                 
                 <?php if ($receipt['remarks']): ?>

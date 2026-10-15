@@ -5,7 +5,6 @@
 require_once '../config/database.php';
 require_once '../includes/admin_auth.php';
 requireAuth();
-requireAuth();
 require_once '../includes/academic_helper.php';
 
 $student_id = isset($_GET['student_id']) ? (int)$_GET['student_id'] : 0;

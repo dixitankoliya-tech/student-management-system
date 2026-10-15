@@ -7,22 +7,26 @@ require_once '../includes/admin_auth.php';
 
 requireAuth();
 
-// Fetch top 3 students per course based on CGPA
-$courses = $pdo->query("SELECT DISTINCT course_name FROM courses WHERE status = 'Active'")->fetchAll(PDO::FETCH_COLUMN);
+// Fetch top 3 students per course based on academic performance
 $toppers_by_course = [];
+$topper_rows = $pdo->query("
+    SELECT s.id, s.enrollment_no, s.first_name, s.last_name, s.course,
+           ROUND(AVG(ap.performance_score), 2) as cgpa,
+           NULL as profile_image
+    FROM students s
+    JOIN academic_performance ap ON s.id = ap.student_id
+    WHERE ap.performance_score > 0
+    GROUP BY s.id, s.enrollment_no, s.first_name, s.last_name, s.course
+    ORDER BY s.course ASC, cgpa DESC
+")->fetchAll(PDO::FETCH_ASSOC);
 
-foreach ($courses as $course) {
-    $stmt = $pdo->prepare("
-        SELECT id, enrollment_no, first_name, last_name, cgpa, profile_image 
-        FROM students 
-        WHERE course = ? AND cgpa > 0 AND status = 'Active'
-        ORDER BY cgpa DESC 
-        LIMIT 3
-    ");
-    $stmt->execute([$course]);
-    $toppers = $stmt->fetchAll(PDO::FETCH_ASSOC);
-    if (!empty($toppers)) {
-        $toppers_by_course[$course] = $toppers;
+foreach ($topper_rows as $row) {
+    $course = $row['course'];
+    if (!isset($toppers_by_course[$course])) {
+        $toppers_by_course[$course] = [];
+    }
+    if (count($toppers_by_course[$course]) < 3) {
+        $toppers_by_course[$course][] = $row;
     }
 }
 

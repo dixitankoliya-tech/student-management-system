@@ -24,6 +24,11 @@
  *           'coordinated_course_names' => [...names...] ]
  */
 function getFacultyRoleInfo($pdo, $faculty_id) {
+    static $cache = [];
+    if (isset($cache[$faculty_id])) {
+        return $cache[$faculty_id];
+    }
+
     $info = [
         'role' => 'faculty',
         'faculty' => null,
@@ -36,7 +41,10 @@ function getFacultyRoleInfo($pdo, $faculty_id) {
     $stmt = $pdo->prepare("SELECT * FROM faculty WHERE id = ?");
     $stmt->execute([$faculty_id]);
     $faculty = $stmt->fetch(PDO::FETCH_ASSOC);
-    if (!$faculty) return $info;
+    if (!$faculty) {
+        $cache[$faculty_id] = $info;
+        return $info;
+    }
     
     $info['faculty'] = $faculty;
     $info['role'] = $faculty['role'] ?? 'faculty';
@@ -59,6 +67,7 @@ function getFacultyRoleInfo($pdo, $faculty_id) {
         }
     }
     
+    $cache[$faculty_id] = $info;
     return $info;
 }
 
@@ -66,20 +75,16 @@ function getFacultyRoleInfo($pdo, $faculty_id) {
  * Check if the faculty member is the Dean/HOD.
  */
 function isDean($pdo, $faculty_id) {
-    $stmt = $pdo->prepare("SELECT role FROM faculty WHERE id = ?");
-    $stmt->execute([$faculty_id]);
-    $role = $stmt->fetchColumn();
-    return $role === 'dean';
+    $info = getFacultyRoleInfo($pdo, $faculty_id);
+    return ($info['role'] ?? '') === 'dean';
 }
 
 /**
  * Check if the faculty member is a Course Coordinator.
  */
 function isCoordinator($pdo, $faculty_id) {
-    $stmt = $pdo->prepare("SELECT role FROM faculty WHERE id = ?");
-    $stmt->execute([$faculty_id]);
-    $role = $stmt->fetchColumn();
-    return $role === 'coordinator';
+    $info = getFacultyRoleInfo($pdo, $faculty_id);
+    return ($info['role'] ?? '') === 'coordinator';
 }
 
 /**

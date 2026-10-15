@@ -1,3 +1,4 @@
 <?php
-// Proxy to the central file serving logic
+// Admin portal file serving endpoint
+$portalContext = 'admin';
 require_once __DIR__ . '/../includes/serve_file.php';

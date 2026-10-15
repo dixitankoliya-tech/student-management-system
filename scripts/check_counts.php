@@ -2,13 +2,13 @@
 require_once __DIR__ . '/../config/database.php';
 
 echo "Database Counts:\n";
-$tables = ['students', 'faculty', 'courses', 'subjects', 'student_subject_enrollments', 'marks', 'student_marks', 'faculty_subjects'];
+$tables = $pdo->query('SHOW TABLES')->fetchAll(PDO::FETCH_COLUMN);
 
 foreach($tables as $t) {
     try {
-        $cnt = $pdo->query("SELECT count(*) FROM $t")->fetchColumn();
-        echo str_pad($t, 30) . ": $cnt\n";
+        $cnt = $pdo->query("SELECT count(*) FROM `$t`")->fetchColumn();
+        echo str_pad($t, 32) . ": $cnt\n";
     } catch(Exception $e) {
-        echo str_pad($t, 30) . ": Error - " . $e->getMessage() . "\n";
+        echo str_pad($t, 32) . ": Error - " . $e->getMessage() . "\n";
     }
 }

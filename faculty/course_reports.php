@@ -9,17 +9,20 @@ require_once '../includes/faculty_role_helper.php';
 requireAuth();
 $faculty_id = $_SESSION['faculty_db_id']; 
 
-if (!isCoordinator($pdo, $faculty_id)) {
+if (!isCoordinator($pdo, $faculty_id) && !isDean($pdo, $faculty_id)) {
     http_response_code(403);
     die('<div style="text-align:center;padding:60px;"><h1>403 Access Denied</h1></div>');
 }
 
 $role_info = getFacultyRoleInfo($pdo, $faculty_id);
-if (empty($role_info['coordinated_course_names'])) {
-    die("No course assigned.");
+if (isDean($pdo, $faculty_id)) {
+    $course_name = $_GET['course'] ?? ($role_info['coordinated_course_names'][0] ?? $pdo->query("SELECT course_name FROM courses WHERE status = 'Active' ORDER BY course_name LIMIT 1")->fetchColumn());
+} else {
+    if (empty($role_info['coordinated_course_names'])) {
+        die("No course assigned.");
+    }
+    $course_name = $role_info['coordinated_course_names'][0];
 }
-
-$course_name = $role_info['coordinated_course_names'][0];
 
 // Analytics Queries Scoped to Course
 // A. Student Statistics
@@ -37,41 +40,27 @@ $stmt->execute([$course_name]);
 $semester_students = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
 // B. Academic Performance
-// We query the promotion_history for pass/fail/ATKT
 $stmt = $pdo->prepare("
-    SELECT promotion_status, COUNT(*) as count 
-    FROM promotion_history ph
-    JOIN students s ON ph.student_id = s.id
+    SELECT 
+        SUM(CASE WHEN ap.alert_level = 'Normal' THEN 1 ELSE 0 END) as pass_count,
+        SUM(CASE WHEN ap.alert_level = 'Warning' THEN 1 ELSE 0 END) as atkt_count,
+        SUM(CASE WHEN ap.alert_level = 'Critical' THEN 1 ELSE 0 END) as fail_count,
+        AVG(CASE WHEN ap.performance_score > 0 THEN ap.performance_score END) as avg_sgpa
+    FROM academic_performance ap
+    JOIN students s ON ap.student_id = s.id
     WHERE s.course = ?
-    GROUP BY promotion_status
 ");
 $stmt->execute([$course_name]);
-$promotions = $stmt->fetchAll(PDO::FETCH_ASSOC);
-
-$pass_count = 0; $atkt_count = 0; $fail_count = 0;
-foreach ($promotions as $p) {
-    if ($p['promotion_status'] == 'Promoted') $pass_count = $p['count'];
-    if ($p['promotion_status'] == 'Promoted with ATKT') $atkt_count = $p['count'];
-    if ($p['promotion_status'] == 'Not Promoted') $fail_count = $p['count'];
-}
-
+$perf = $stmt->fetch(PDO::FETCH_ASSOC);
+$pass_count = (int)($perf['pass_count'] ?? 0);
+$atkt_count = (int)($perf['atkt_count'] ?? 0);
+$fail_count = (int)($perf['fail_count'] ?? 0);
 $total_eval = $pass_count + $atkt_count + $fail_count;
 $pass_pct = $total_eval > 0 ? round(($pass_count / $total_eval) * 100, 1) : 0;
 $atkt_pct = $total_eval > 0 ? round(($atkt_count / $total_eval) * 100, 1) : 0;
 $fail_pct = $total_eval > 0 ? round(($fail_count / $total_eval) * 100, 1) : 0;
-
-$stmt = $pdo->prepare("
-    SELECT AVG(sae.sgpa) 
-    FROM student_academic_enrollments sae
-    JOIN students s ON sae.student_id = s.id
-    WHERE s.course = ? AND sae.sgpa > 0
-");
-$stmt->execute([$course_name]);
-$avg_sgpa = $stmt->fetchColumn();
-
-$stmt = $pdo->prepare("SELECT AVG(cgpa) FROM students WHERE course = ? AND cgpa > 0");
-$stmt->execute([$course_name]);
-$avg_cgpa = $stmt->fetchColumn();
+$avg_sgpa = round((float)($perf['avg_sgpa'] ?? 0), 2);
+$avg_cgpa = $avg_sgpa;
 
 // C. Attendance
 $stmt = $pdo->prepare("
@@ -94,10 +83,10 @@ $total_faculty = $stmt->fetchColumn();
 // F. Fees
 $stmt = $pdo->prepare("
     SELECT 
-        SUM(fi.total_amount) as assigned, 
-        SUM(fi.paid_amount) as paid, 
-        SUM(fi.pending_amount) as pending 
-    FROM fee_invoices fi
+        COALESCE(SUM(fi.total_amount), 0) as assigned, 
+        COALESCE(SUM(fi.paid_amount), 0) as paid, 
+        COALESCE(SUM(fi.pending_amount), 0) as pending 
+    FROM student_fees fi
     JOIN students s ON fi.student_id = s.id
     WHERE s.course = ?
 ");

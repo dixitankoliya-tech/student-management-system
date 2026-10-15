@@ -126,7 +126,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['submit_assignment']))
                 $submission = $subStmt->fetch();
                 
             } catch (PDOException $e) {
-                $error = "Database error: " . $e->getMessage();
+                error_log("Submit Assignment DB Error: " . $e->getMessage());
+                $error = APP_DEBUG ? "Database error: " . $e->getMessage() : "A database error occurred while submitting. Please try again.";
             }
         }
     }

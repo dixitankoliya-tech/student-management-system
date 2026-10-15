@@ -3,11 +3,11 @@ require_once '../config/database.php';
 require_once '../includes/student_auth.php';
 
 requireRole('student');
-$student_id = $_SESSION['user_id'];
+$student_id = $_SESSION['student_id'] ?? $_SESSION['user_id'];
 
 // Fetch fee structures assigned to this student
 $feesStmt = $pdo->prepare("
-    SELECT sf.*, fs.fee_name, fs.total_amount, fs.academic_year, fs.semester, fs.due_date 
+    SELECT sf.*, fs.fee_name, fs.amount as fee_structure_amount, fs.academic_year, fs.semester, fs.due_date 
     FROM student_fees sf
     JOIN fee_structures fs ON sf.fee_structure_id = fs.id
     WHERE sf.student_id = ?

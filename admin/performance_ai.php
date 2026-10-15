@@ -10,13 +10,12 @@ requireAuth();
 // Aggregate performance data
 $course_performance = $pdo->query("
     SELECT s.course, 
-           COUNT(*) as total_students,
-           AVG(s.cgpa) as avg_cgpa,
-           SUM(CASE WHEN ph.promotion_status = 'Not Promoted' THEN 1 ELSE 0 END) as fail_count,
-           SUM(CASE WHEN ph.promotion_status = 'Promoted with ATKT' THEN 1 ELSE 0 END) as atkt_count
+           COUNT(DISTINCT s.id) as total_students,
+           ROUND(AVG(ap.performance_score), 2) as avg_cgpa,
+           SUM(CASE WHEN ap.alert_level = 'Critical' THEN 1 ELSE 0 END) as fail_count,
+           SUM(CASE WHEN ap.alert_level = 'Warning' THEN 1 ELSE 0 END) as atkt_count
     FROM students s
-    LEFT JOIN promotion_history ph ON s.id = ph.student_id
-    WHERE s.status = 'Active'
+    LEFT JOIN academic_performance ap ON s.id = ap.student_id
     GROUP BY s.course
 ")->fetchAll(PDO::FETCH_ASSOC);
 

@@ -4,28 +4,40 @@ require_once '../includes/admin_auth.php';
 
 requireRole('admin');
 
-// Fetch REAL statistics
-$totalStudents = $pdo->query("SELECT COUNT(*) FROM students")->fetchColumn();
-$activeStudents = $pdo->query("SELECT COUNT(DISTINCT student_id) FROM student_academic_enrollments WHERE status = 'Active'")->fetchColumn();
-$totalFaculty = $pdo->query("SELECT COUNT(*) FROM faculty")->fetchColumn();
-$totalCourses = $pdo->query("SELECT COUNT(*) FROM courses")->fetchColumn();
-$totalDepts = $pdo->query("SELECT COUNT(*) FROM departments")->fetchColumn();
+// Fetch ALL core, academic, and financial statistics in 1 single consolidated batch query
+$stats = $pdo->query("
+    SELECT 
+        (SELECT COUNT(*) FROM students) as total_students,
+        (SELECT COUNT(DISTINCT student_id) FROM student_academic_enrollments WHERE status = 'Active') as active_students,
+        (SELECT COUNT(*) FROM faculty) as total_faculty,
+        (SELECT COUNT(*) FROM courses) as total_courses,
+        (SELECT COUNT(*) FROM departments) as total_depts,
+        (SELECT COALESCE(SUM(status IN ('Upcoming', 'Ongoing')), 0) FROM examinations) as active_exams,
+        (SELECT COALESCE(SUM(status = 'Results Published'), 0) FROM examinations) as published_results,
+        (SELECT COALESCE(SUM(total_amount), 0) FROM student_fees) as total_fees,
+        (SELECT COALESCE(SUM(paid_amount), 0) FROM student_fees) as fees_collected,
+        (SELECT COALESCE(SUM(pending_amount), 0) FROM student_fees) as fees_pending
+")->fetch(PDO::FETCH_ASSOC);
 
-// Academic Overview
-$activeExams = $pdo->query("SELECT COUNT(*) FROM examinations WHERE status IN ('Upcoming', 'Ongoing')")->fetchColumn();
-$publishedResults = $pdo->query("SELECT COUNT(*) FROM examinations WHERE status = 'Results Published'")->fetchColumn();
+$totalStudents = (int)($stats['total_students'] ?? 0);
+$activeStudents = (int)($stats['active_students'] ?? 0);
+$totalFaculty = (int)($stats['total_faculty'] ?? 0);
+$totalCourses = (int)($stats['total_courses'] ?? 0);
+$totalDepts = (int)($stats['total_depts'] ?? 0);
+
+$activeExams = (int)($stats['active_exams'] ?? 0);
+$publishedResults = (int)($stats['published_results'] ?? 0);
+
+$totalFees = (float)($stats['total_fees'] ?? 0);
+$feesCollected = (float)($stats['fees_collected'] ?? 0);
+$feesPending = (float)($stats['fees_pending'] ?? 0);
+$collectionPercent = ($totalFees > 0) ? round(($feesCollected / $totalFees) * 100, 1) : 0;
 
 // Fetch today's attendance stats
 require_once '../includes/academic_calculator.php';
 $today = date('Y-m-d');
 $attendanceStats = calculateAggregateAttendance($pdo, $today);
 $attendancePercent = $attendanceStats['percentage'];
-
-// Financial Overview
-$totalFees = $pdo->query("SELECT SUM(total_amount) FROM student_fees")->fetchColumn() ?: 0;
-$feesCollected = $pdo->query("SELECT SUM(paid_amount) FROM student_fees")->fetchColumn() ?: 0;
-$feesPending = $pdo->query("SELECT SUM(pending_amount) FROM student_fees")->fetchColumn() ?: 0;
-$collectionPercent = ($totalFees > 0) ? round(($feesCollected / $totalFees) * 100, 1) : 0;
 
 // Recent Fee Collections (last 7 days) for chart
 $chartDataQuery = $pdo->query("

@@ -81,6 +81,7 @@ $is_graduating = ($selected_semester == $max_semesters);
     <div class="card-body">
         <?php if (count($students) > 0): ?>
             <form action="process_promotion.php" method="POST" id="promotionForm">
+                <?php csrfField(); ?>
                 <input type="hidden" name="course" value="<?php echo htmlspecialchars($selected_course); ?>">
                 <input type="hidden" name="from_semester" value="<?php echo htmlspecialchars($selected_semester); ?>">
                 <input type="hidden" name="to_semester" value="<?php echo (int)$selected_semester + 1; ?>">

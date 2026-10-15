@@ -7,30 +7,46 @@ requireRole('admin');
 $success = '';
 $error = '';
 
+if (isset($_GET['msg'])) {
+    if ($_GET['msg'] === 'added') $success = "Fee structure added successfully.";
+    if ($_GET['msg'] === 'deleted') $success = "Fee structure deleted successfully.";
+}
+if (isset($_GET['error'])) {
+    $error = htmlspecialchars($_GET['error']);
+}
+
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     requireValidCsrf();
     if (isset($_POST['action']) && $_POST['action'] === 'add') {
-        $course = trim($_POST['course']);
-        $academic_year = trim($_POST['academic_year']);
-        $semester = (int)$_POST['semester'];
-        $fee_name = trim($_POST['fee_name']);
-        $amount = (float)$_POST['amount'];
-        $due_date = trim($_POST['due_date']);
+        $course = trim($_POST['course'] ?? '');
+        $academic_year = trim($_POST['academic_year'] ?? '');
+        $semester = (int)($_POST['semester'] ?? 0);
+        $fee_name = trim($_POST['fee_name'] ?? '');
+        $amount = isset($_POST['amount']) ? (float)$_POST['amount'] : 0;
+        $due_date = trim($_POST['due_date'] ?? '');
         
-        if (empty($course) || empty($academic_year) || empty($fee_name) || empty($due_date) || $amount <= 0) {
-            $error = "All fields are required and amount must be greater than zero.";
+        if (empty($course) || empty($academic_year) || empty($fee_name) || empty($due_date) || $amount <= 0 || $semester < 1 || $semester > 12) {
+            $error = "All fields are required, semester must be 1-12, and amount must be greater than zero.";
         } else {
-            try {
-                $stmt = $pdo->prepare("INSERT INTO fee_structures (course, academic_year, semester, fee_name, amount, due_date) VALUES (?, ?, ?, ?, ?, ?)");
-                $stmt->execute([$course, $academic_year, $semester, $fee_name, $amount, $due_date]);
-                
-                // Log action
-                $logStmt = $pdo->prepare("INSERT INTO audit_logs (user_id, action, target, description) VALUES (?, ?, ?, ?)");
-                $logStmt->execute([$_SESSION['user_id'], 'Create Fee Structure', "Fee Structure for $course", "Created fee $fee_name (Amount: $amount)"]);
-                
-                $success = "Fee structure added successfully.";
-            } catch (PDOException $e) {
-                $error = "Database error. Could not add fee structure.";
+            // Check for duplicate structure
+            $dupCheck = $pdo->prepare("SELECT id FROM fee_structures WHERE course = ? AND academic_year = ? AND semester = ? AND fee_name = ?");
+            $dupCheck->execute([$course, $academic_year, $semester, $fee_name]);
+            if ($dupCheck->fetch()) {
+                $error = "A fee structure for '$fee_name' already exists for $course Semester $semester ($academic_year).";
+            } else {
+                try {
+                    $stmt = $pdo->prepare("INSERT INTO fee_structures (course, academic_year, semester, fee_name, amount, due_date) VALUES (?, ?, ?, ?, ?, ?)");
+                    $stmt->execute([$course, $academic_year, $semester, $fee_name, $amount, $due_date]);
+                    
+                    // Log action
+                    $logStmt = $pdo->prepare("INSERT INTO audit_logs (user_id, action, target, description) VALUES (?, ?, ?, ?)");
+                    $logStmt->execute([$_SESSION['user_id'], 'Create Fee Structure', "Fee Structure for $course", "Created fee $fee_name (Amount: $amount)"]);
+                    
+                    header("Location: fee_structures.php?msg=added");
+                    exit();
+                } catch (PDOException $e) {
+                    $error = "Database error. Could not add fee structure.";
+                }
             }
         }
     } elseif (isset($_POST['action']) && $_POST['action'] === 'delete') {
@@ -47,7 +63,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $logStmt = $pdo->prepare("INSERT INTO audit_logs (user_id, action, target, description) VALUES (?, ?, ?, ?)");
             $logStmt->execute([$_SESSION['user_id'], 'Delete Fee Structure', "Fee Structure ID $id", "Deleted fee structure"]);
             
-            $success = "Fee structure deleted successfully.";
+            header("Location: fee_structures.php?msg=deleted");
+            exit();
         }
     }
 }
@@ -59,34 +76,40 @@ $years = $pdo->query("SELECT year_name FROM academic_years WHERE status = 'Activ
 $structures = $pdo->query("SELECT * FROM fee_structures ORDER BY created_at DESC")->fetchAll();
 
 include '../includes/admin_header.php';
+include '../includes/admin_sidebar.php';
+include '../includes/admin_navbar.php';
 ?>
-<div class="d-flex" id="wrapper">
-    <?php include '../includes/admin_sidebar.php'; ?>
-    <div id="page-content-wrapper" class="w-100 bg-light">
-        <?php include '../includes/admin_navbar.php'; ?>
-        <div class="container-fluid py-4 px-4">
-            <div class="d-flex justify-content-between align-items-center mb-4">
-                <div>
-                    <h2 class="h3 mb-0 text-dark fw-bold">Fee Structures</h2>
-                    <p class="text-muted mb-0">Manage university fee templates</p>
-                </div>
-                <button class="btn btn-primary fw-bold shadow-sm" data-bs-toggle="modal" data-bs-target="#addFeeModal">
-                    <i class="fas fa-plus-circle me-2"></i> Create Fee Structure
-                </button>
-            </div>
 
-            <?php if ($success): ?>
-                <div class="alert alert-success alert-dismissible fade show border-0 shadow-sm" role="alert">
-                    <i class="fas fa-check-circle me-2"></i> <?php echo $success; ?>
-                    <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
-                </div>
-            <?php endif; ?>
-            <?php if ($error): ?>
-                <div class="alert alert-danger alert-dismissible fade show border-0 shadow-sm" role="alert">
-                    <i class="fas fa-exclamation-circle me-2"></i> <?php echo $error; ?>
-                    <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
-                </div>
-            <?php endif; ?>
+<!-- Breadcrumb -->
+<nav aria-label="breadcrumb" class="mb-3">
+    <ol class="breadcrumb">
+        <li class="breadcrumb-item"><a href="dashboard.php">Dashboard</a></li>
+        <li class="breadcrumb-item active">Fee Structures</li>
+    </ol>
+</nav>
+
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <div>
+        <h2 class="h3 mb-0 text-dark fw-bold"><i class="fas fa-money-check-alt me-2 text-primary"></i>Fee Structures</h2>
+        <p class="text-muted mb-0">Manage university fee templates</p>
+    </div>
+    <button class="btn btn-primary fw-bold shadow-sm" data-bs-toggle="modal" data-bs-target="#addFeeModal">
+        <i class="fas fa-plus-circle me-2"></i> Create Fee Structure
+    </button>
+</div>
+
+<?php if ($success): ?>
+    <div class="alert alert-success alert-dismissible fade show border-0 shadow-sm" role="alert">
+        <i class="fas fa-check-circle me-2"></i> <?php echo $success; ?>
+        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+    </div>
+<?php endif; ?>
+<?php if ($error): ?>
+    <div class="alert alert-danger alert-dismissible fade show border-0 shadow-sm" role="alert">
+        <i class="fas fa-exclamation-circle me-2"></i> <?php echo $error; ?>
+        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+    </div>
+<?php endif; ?>
 
             <div class="card border-0 shadow-sm rounded-4">
                 <div class="card-body p-4">
@@ -116,7 +139,7 @@ include '../includes/admin_header.php';
                                         <td><?php echo date('M d, Y', strtotime($s['due_date'])); ?></td>
                                         <td class="text-end">
                                             <form method="POST" class="d-inline" onsubmit="return confirm('Delete this fee structure?');">
-                                                <input type="hidden" name="csrf_token" value="<?php echo $_SESSION['csrf_token']; ?>">
+                                                <?php csrfField(); ?>
                                                 <input type="hidden" name="action" value="delete">
                                                 <input type="hidden" name="id" value="<?php echo $s['id']; ?>">
                                                 <button type="submit" class="btn btn-sm btn-outline-danger"><i class="fas fa-trash"></i></button>
@@ -134,16 +157,13 @@ include '../includes/admin_header.php';
                     </div>
                 </div>
             </div>
-        </div>
-    </div>
-</div>
 
 <!-- Add Modal -->
 <div class="modal fade" id="addFeeModal" tabindex="-1">
     <div class="modal-dialog">
         <div class="modal-content rounded-4 border-0 shadow">
             <form method="POST">
-                <input type="hidden" name="csrf_token" value="<?php echo $_SESSION['csrf_token']; ?>">
+                <?php csrfField(); ?>
                 <input type="hidden" name="action" value="add">
                 <div class="modal-header border-bottom-0 pb-0">
                     <h5 class="modal-title fw-bold">Create Fee Structure</h5>

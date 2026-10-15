@@ -22,14 +22,18 @@
                                 <a href="notifications.php" class="nav-link position-relative text-secondary mt-1">
                                     <i class="fas fa-bell fa-lg"></i>
                                     <?php
-                                        // Try to safely fetch unread notifications count if user is logged in
-                                        $unread_count = 0;
-                                        if (isset($_SESSION['user_id'])) {
-                                            try {
-                                                $unread_stmt = $pdo->prepare("SELECT COUNT(*) FROM notifications WHERE user_id = ? AND is_read = 0");
-                                                $unread_stmt->execute([$_SESSION['user_id']]);
-                                                $unread_count = $unread_stmt->fetchColumn();
-                                            } catch (Exception $e) {}
+                                        if (!isset($unread_count)) {
+                                            if (isset($unreadAlerts)) {
+                                                $unread_count = (int)$unreadAlerts;
+                                            } elseif (isset($_SESSION['user_id'])) {
+                                                try {
+                                                    $unread_stmt = $pdo->prepare("SELECT COUNT(*) FROM notifications WHERE user_id = ? AND is_read = 0");
+                                                    $unread_stmt->execute([$_SESSION['user_id']]);
+                                                    $unread_count = (int)$unread_stmt->fetchColumn();
+                                                } catch (Exception $e) { $unread_count = 0; }
+                                            } else {
+                                                $unread_count = 0;
+                                            }
                                         }
                                     ?>
                                     <?php if ($unread_count > 0): ?>

@@ -6,7 +6,10 @@ require_once '../config/database.php';
 require_once '../includes/admin_auth.php';
 requireAuth();
 
-$id = $_GET['id'] ?? 0;
+$id = (int)($_GET['id'] ?? $_GET['student_id'] ?? 0);
+if (!$id) {
+    $id = (int)$pdo->query("SELECT id FROM students ORDER BY id ASC LIMIT 1")->fetchColumn();
+}
 $stmt = $pdo->prepare("SELECT * FROM students WHERE id = ?");
 $stmt->execute([$id]);
 $student = $stmt->fetch(PDO::FETCH_ASSOC);

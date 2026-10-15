@@ -99,10 +99,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['save_marks'])) {
             }
             $pdo->commit();
             logActivity($pdo, 'ENTER_MARKS', null, "Entered marks for Exam $exam_id, Subject $subject_id ($action_type)");
-            $success = "Marks saved as $action_type successfully.";
+        } catch (PDOException $e) {
+            $pdo->rollBack();
+            error_log("Save Marks DB Error: " . $e->getMessage());
+            $error = APP_DEBUG ? "Database error: " . $e->getMessage() : "A database error occurred while saving marks. Please try again.";
         } catch (Exception $e) {
             $pdo->rollBack();
-            $error = "Error saving marks: " . $e->getMessage();
+            $error = $e->getMessage();
         }
     } else {
         $error = "Unauthorized to enter marks for this subject.";

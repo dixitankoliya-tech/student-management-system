@@ -117,7 +117,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['add_assignment'])) {
                     send_notification($pdo, 'student', $s['id'], $notification_title, "A new assignment is due on " . date('M j, Y', strtotime($due_date)), 'academic', 'assignments.php');
                 }
             } catch (PDOException $e) {
-                $error = "Database error: " . $e->getMessage();
+                error_log("Assignment Create DB Error: " . $e->getMessage());
+                $error = APP_DEBUG ? "Database error: " . $e->getMessage() : "A database error occurred while creating the assignment. Please try again.";
             }
         }
     }

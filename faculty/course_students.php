@@ -9,44 +9,50 @@ require_once '../includes/faculty_role_helper.php';
 requireAuth();
 $faculty_id = $_SESSION['faculty_db_id']; 
 
-if (!isCoordinator($pdo, $faculty_id)) {
+if (!isCoordinator($pdo, $faculty_id) && !isDean($pdo, $faculty_id)) {
     http_response_code(403);
     die('<div style="text-align:center;padding:60px;"><h1>403 Access Denied</h1></div>');
 }
 
 $role_info = getFacultyRoleInfo($pdo, $faculty_id);
-if (empty($role_info['coordinated_course_names'])) {
-    die("No course assigned.");
+if (isDean($pdo, $faculty_id)) {
+    $course_name = $_GET['course'] ?? ($role_info['coordinated_course_names'][0] ?? $pdo->query("SELECT course_name FROM courses WHERE status = 'Active' ORDER BY course_name LIMIT 1")->fetchColumn());
+} else {
+    if (empty($role_info['coordinated_course_names'])) {
+        die("No course assigned.");
+    }
+    $course_name = $role_info['coordinated_course_names'][0];
 }
-
-$course_name = $role_info['coordinated_course_names'][0];
 
 // Filters
 $search = $_GET['search'] ?? '';
 $semester = $_GET['semester'] ?? '';
 $status = $_GET['status'] ?? 'Active';
 
-$query = "SELECT * FROM students WHERE course = ?";
+$query = "
+    SELECT s.*, 
+           COALESCE(ROUND(AVG(ap.performance_score), 2), 0) as cgpa, 
+           COALESCE(MAX(sae.status), 'Active') as status
+    FROM students s
+    LEFT JOIN academic_performance ap ON s.id = ap.student_id
+    LEFT JOIN student_academic_enrollments sae ON s.id = sae.student_id AND sae.status = 'Active'
+    WHERE s.course = ?
+";
 $params = [$course_name];
 
-if ($status) {
-    $query .= " AND status = ?";
-    $params[] = $status;
-}
-
 if ($semester) {
-    $query .= " AND semester = ?";
+    $query .= " AND s.semester = ?";
     $params[] = $semester;
 }
 
 if ($search) {
-    $query .= " AND (enrollment_no LIKE ? OR first_name LIKE ? OR last_name LIKE ?)";
+    $query .= " AND (s.enrollment_no LIKE ? OR s.first_name LIKE ? OR s.last_name LIKE ?)";
     $params[] = "%$search%";
     $params[] = "%$search%";
     $params[] = "%$search%";
 }
 
-$query .= " ORDER BY semester ASC, enrollment_no ASC";
+$query .= " GROUP BY s.id ORDER BY s.semester ASC, s.enrollment_no ASC";
 
 $stmt = $pdo->prepare($query);
 $stmt->execute($params);

@@ -1,14 +1,11 @@
 <?php
 require 'config/database.php';
 
-echo "=== fee_structures ===\n";
-$stmt = $pdo->query("DESCRIBE fee_structures");
-print_r($stmt->fetchAll(PDO::FETCH_ASSOC));
-
-echo "=== student_fees ===\n";
-$stmt = $pdo->query("DESCRIBE student_fees");
-print_r($stmt->fetchAll(PDO::FETCH_ASSOC));
-
-echo "=== fee_payments ===\n";
+echo "=== fee_payments columns ===\n";
 $stmt = $pdo->query("DESCRIBE fee_payments");
-print_r($stmt->fetchAll(PDO::FETCH_ASSOC));
+foreach ($stmt->fetchAll(PDO::FETCH_ASSOC) as $col) {
+    echo $col['Field'] . " (" . $col['Type'] . ")\n";
+}
+
+$orphans = $pdo->query("SELECT COUNT(*) FROM fee_payments WHERE student_fee_id NOT IN (SELECT id FROM student_fees)")->fetchColumn();
+echo "\nOrphan fee payments without student_fees: $orphans\n";

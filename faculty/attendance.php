@@ -83,7 +83,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['save_attendance'])) {
             $success = "Attendance saved successfully.";
         } catch (PDOException $e) {
             $pdo->rollBack();
-            $error = "Error saving attendance: " . $e->getMessage();
+            error_log("Save Attendance DB Error: " . $e->getMessage());
+            $error = APP_DEBUG ? "Error saving attendance: " . $e->getMessage() : "A database error occurred while saving attendance. Please try again.";
         }
     } else {
         $error = "Unauthorized to mark attendance for this subject and division.";

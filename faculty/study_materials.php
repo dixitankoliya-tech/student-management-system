@@ -107,7 +107,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                         }
                     }
                 } catch (PDOException $e) {
-                    $error = "Database error: " . $e->getMessage();
+                    error_log("Study Material Upload DB Error: " . $e->getMessage());
+                    $error = APP_DEBUG ? "Database error: " . $e->getMessage() : "A database error occurred while uploading. Please try again.";
                 }
             }
         }
@@ -132,7 +133,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 logActivity($pdo, 'DELETE_MATERIAL', null, "Deleted material ID: $id");
             }
         } catch (PDOException $e) {
-            $error = "Database error: " . $e->getMessage();
+            error_log("Study Material Delete DB Error: " . $e->getMessage());
+            $error = APP_DEBUG ? "Database error: " . $e->getMessage() : "A database error occurred while deleting material. Please try again.";
         }
     }
 }

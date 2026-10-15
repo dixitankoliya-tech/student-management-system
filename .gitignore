@@ -1,22 +1,36 @@
+# Environment files
 .env
 .env.*
+.env*
+!.env.example
+
+# Logs and debug
 *.log
 logs/
+php_errors.log
+
+# Caches and temporary directories
 cache/
 tmp/
 temp/
+scratch/
+scratch_*.php
 .DS_Store
 Thumbs.db
 .vscode/
 .idea/
+
+# Local session and cookie tokens
+cookies.txt
+*cookie*.txt
+scripts/*cookie*.txt
+
+# Uploads and build/deploy artifacts
 uploads/
+.vercel/
 
-.vercel
-.env*
-
-# Local Debug & Recovery
+# Local Debug & Recovery Backups
 LOCAL_RECOVERY_BACKUP/
 LOCAL_RECOVERY_DATABASE_BACKUP/
-cookies.txt
-
-.vercel
+scripts/pre_migration_backup.json
+scripts/master_audit_results.json

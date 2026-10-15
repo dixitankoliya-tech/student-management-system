@@ -53,6 +53,7 @@ try {
         PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION,
         PDO::ATTR_DEFAULT_FETCH_MODE => PDO::FETCH_ASSOC,
         PDO::ATTR_TIMEOUT => 15,
+        PDO::ATTR_PERSISTENT => true,
     ];
 
     // Enable TLS for non-localhost connections (required by TiDB Cloud Serverless)
@@ -84,21 +85,28 @@ try {
  */
 function logActivity($pdo, $action, $student_id, $description) {
     try {
-        $stmt = $pdo->prepare("INSERT INTO activity_logs (action, student_id, description) VALUES (?, ?, ?)");
-        $stmt->execute([$action, $student_id, $description]);
-    } catch(PDOException $e) {
-        // Just log the error, don't break the main application flow
-        error_log("Failed to log activity: " . $e->getMessage());
-    }
-    
-    // Also write to audit_logs for comprehensive audit trail
-    try {
-        $user_id = $_SESSION['user_id'] ?? 0;
+        $user_id = (int)($_SESSION['user_id'] ?? 0);
         $target = $student_id ? "student:$student_id" : 'system';
-        $stmt = $pdo->prepare("INSERT INTO audit_logs (user_id, action, target, description) VALUES (?, ?, ?, ?)");
-        $stmt->execute([$user_id, $action, $target, $description]);
+        
+        $sql = "INSERT INTO activity_logs (action, student_id, description) VALUES (?, ?, ?); " .
+               "INSERT INTO audit_logs (user_id, action, target, description) VALUES (?, ?, ?, ?)";
+        $stmt = $pdo->prepare($sql);
+        $stmt->execute([
+            $action, $student_id, $description,
+            $user_id, $action, $target, $description
+        ]);
     } catch(PDOException $e) {
-        error_log("Failed to write audit log: " . $e->getMessage());
+        // Fallback to separate statements if multi-query is disabled
+        try {
+            $stmt = $pdo->prepare("INSERT INTO activity_logs (action, student_id, description) VALUES (?, ?, ?)");
+            $stmt->execute([$action, $student_id, $description]);
+        } catch(PDOException $ex) { error_log("Activity log error: " . $ex->getMessage()); }
+        try {
+            $user_id = (int)($_SESSION['user_id'] ?? 0);
+            $target = $student_id ? "student:$student_id" : 'system';
+            $stmt = $pdo->prepare("INSERT INTO audit_logs (user_id, action, target, description) VALUES (?, ?, ?, ?)");
+            $stmt->execute([$user_id, $action, $target, $description]);
+        } catch(PDOException $ex) { error_log("Audit log error: " . $ex->getMessage()); }
     }
 }
 

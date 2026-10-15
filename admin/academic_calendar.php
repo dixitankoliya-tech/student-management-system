@@ -11,6 +11,14 @@ requireRole('admin');
 $error = '';
 $success = '';
 
+if (isset($_GET['msg'])) {
+    if ($_GET['msg'] === 'added') $success = 'Calendar event added successfully.';
+    if ($_GET['msg'] === 'deleted') $success = 'Event deleted successfully.';
+}
+if (isset($_GET['error'])) {
+    $error = htmlspecialchars($_GET['error']);
+}
+
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     requireValidCsrf();
 
@@ -26,14 +34,17 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         
         if (empty($academic_session) || empty($event_type) || empty($event_name) || empty($start_date)) {
             $error = 'Session, event type, name, and start date are required.';
+        } elseif ($end_date && $start_date > $end_date) {
+            $error = 'Start date cannot be after end date.';
         } else {
             try {
                 $stmt = $pdo->prepare("INSERT INTO academic_calendar (academic_session, event_type, event_name, start_date, end_date, semester, course, description) VALUES (?, ?, ?, ?, ?, ?, ?, ?)");
                 $stmt->execute([$academic_session, $event_type, $event_name, $start_date, $end_date, $semester, $course, $description]);
                 logActivity($pdo, 'ADD_CALENDAR_EVENT', null, "Added calendar event: $event_name");
-                $success = 'Calendar event added successfully.';
+                header("Location: academic_calendar.php?msg=added");
+                exit();
             } catch (PDOException $e) {
-                $error = 'Database error: ' . $e->getMessage();
+                $error = 'Database error. Could not add calendar event.';
             }
         }
     } elseif (isset($_POST['delete_event'])) {
@@ -42,7 +53,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $stmt = $pdo->prepare("DELETE FROM academic_calendar WHERE id = ?");
             $stmt->execute([$event_id]);
             logActivity($pdo, 'DELETE_CALENDAR_EVENT', null, "Deleted calendar event $event_id");
-            $success = 'Event deleted successfully.';
+            header("Location: academic_calendar.php?msg=deleted");
+            exit();
         } catch (PDOException $e) {
             $error = 'Error deleting event.';
         }
@@ -52,8 +64,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 // Fetch filter
 $filter_session = $_GET['session'] ?? '';
 
-// Fetch sessions for filter
-$sessions = $pdo->query("SELECT DISTINCT academic_session FROM academic_calendar ORDER BY academic_session DESC")->fetchAll(PDO::FETCH_COLUMN);
+// Fetch sessions for filter from both calendar and academic years
+$sessions = $pdo->query("SELECT DISTINCT academic_session FROM academic_calendar UNION SELECT DISTINCT year_name FROM academic_years WHERE status = 'Active' ORDER BY 1 DESC")->fetchAll(PDO::FETCH_COLUMN);
 
 // Fetch events
 $query = "SELECT * FROM academic_calendar";
@@ -71,37 +83,42 @@ $events = $stmt->fetchAll();
 $courses = $pdo->query("SELECT course_name FROM courses WHERE status='Active' ORDER BY course_name")->fetchAll(PDO::FETCH_COLUMN);
 
 $event_types = ['Semester Start', 'Semester End', 'Exam Period', 'Holiday', 'Result Publication', 'Assignment Period', 'Registration', 'Other'];
-?>
-<?php
+
 include '../includes/admin_header.php';
+include '../includes/admin_sidebar.php';
+include '../includes/admin_navbar.php';
 ?>
-    <div class="d-flex" id="wrapper">
-        <?php include '../includes/admin_sidebar.php'; ?>
-        <div id="page-content-wrapper" class="w-100">
-            <?php include '../includes/admin_navbar.php'; ?>
-            <div class="container-fluid px-4 py-4">
-                <nav aria-label="breadcrumb" class="mb-3">
-                    <ol class="breadcrumb">
-                        <li class="breadcrumb-item"><a href="dashboard.php">Dashboard</a></li>
-                        <li class="breadcrumb-item active">Academic Calendar</li>
-                    </ol>
-                </nav>
 
-                <div class="d-flex justify-content-between align-items-center mb-4">
-                    <h2 class="fw-bold mb-0"><i class="fas fa-calendar-day me-2 text-primary"></i>Academic Calendar</h2>
-                    <button class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#addModal">
-                        <i class="fas fa-plus me-2"></i>Add Event
-                    </button>
-                </div>
+<!-- Breadcrumb -->
+<nav aria-label="breadcrumb" class="mb-3">
+    <ol class="breadcrumb">
+        <li class="breadcrumb-item"><a href="dashboard.php">Dashboard</a></li>
+        <li class="breadcrumb-item active">Academic Calendar</li>
+    </ol>
+</nav>
 
-                <?php if ($error): ?>
-                    <div class="alert alert-danger alert-dismissible fade show"><?= htmlspecialchars($error) ?>
-                    <button type="button" class="btn-close" data-bs-dismiss="alert"></button></div>
-                <?php endif; ?>
-                <?php if ($success): ?>
-                    <div class="alert alert-success alert-dismissible fade show"><?= htmlspecialchars($success) ?>
-                    <button type="button" class="btn-close" data-bs-dismiss="alert"></button></div>
-                <?php endif; ?>
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <div>
+        <h2 class="h3 mb-0 text-dark fw-bold"><i class="fas fa-calendar-day me-2 text-primary"></i>Academic Calendar</h2>
+        <p class="text-muted mb-0">Manage university academic milestones, terms, and examination schedules</p>
+    </div>
+    <button class="btn btn-primary fw-bold shadow-sm" data-bs-toggle="modal" data-bs-target="#addModal">
+        <i class="fas fa-plus me-2"></i>Add Event
+    </button>
+</div>
+
+<?php if ($error): ?>
+    <div class="alert alert-danger alert-dismissible fade show border-0 shadow-sm mb-4">
+        <i class="fas fa-exclamation-circle me-2"></i><?= htmlspecialchars($error) ?>
+        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+    </div>
+<?php endif; ?>
+<?php if ($success): ?>
+    <div class="alert alert-success alert-dismissible fade show border-0 shadow-sm mb-4">
+        <i class="fas fa-check-circle me-2"></i><?= htmlspecialchars($success) ?>
+        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+    </div>
+<?php endif; ?>
 
                 <!-- Filter -->
                 <div class="card border-0 shadow-sm rounded-4 mb-4">
@@ -183,9 +200,6 @@ include '../includes/admin_header.php';
                         </div>
                     </div>
                 </div>
-            </div>
-        </div>
-    </div>
 
     <!-- Add Modal -->
     <div class="modal fade" id="addModal" tabindex="-1">
@@ -250,7 +264,5 @@ include '../includes/admin_header.php';
         </div>
     </div>
 
-    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
-</body>
-</html>
+<?php include '../includes/footer.php'; ?>
 

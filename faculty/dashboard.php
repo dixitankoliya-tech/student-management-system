@@ -24,13 +24,22 @@ $dean_stats = null;
 $coordinator_stats = null;
 
 if ($faculty_role === 'dean') {
+    $deanCounts = $pdo->query("
+        SELECT 
+            (SELECT COUNT(*) FROM students) as total_students,
+            (SELECT COUNT(*) FROM faculty WHERE status = 'Active') as total_faculty,
+            (SELECT COUNT(*) FROM courses WHERE status = 'Active') as total_courses,
+            (SELECT COUNT(*) FROM subjects) as total_subjects,
+            (SELECT COUNT(*) FROM course_coordinators WHERE status = 'Active') as active_coordinators,
+            (SELECT COUNT(*) FROM examinations) as total_exams
+    ")->fetch(PDO::FETCH_ASSOC);
     $dean_stats = [
-        'total_students' => $pdo->query("SELECT COUNT(*) FROM students")->fetchColumn(),
-        'total_faculty' => $pdo->query("SELECT COUNT(*) FROM faculty WHERE status = 'Active'")->fetchColumn(),
-        'total_courses' => $pdo->query("SELECT COUNT(*) FROM courses WHERE status = 'Active'")->fetchColumn(),
-        'total_subjects' => $pdo->query("SELECT COUNT(*) FROM subjects")->fetchColumn(),
-        'active_coordinators' => $pdo->query("SELECT COUNT(*) FROM course_coordinators WHERE status = 'Active'")->fetchColumn(),
-        'total_exams' => $pdo->query("SELECT COUNT(*) FROM examinations")->fetchColumn(),
+        'total_students' => (int)($deanCounts['total_students'] ?? 0),
+        'total_faculty' => (int)($deanCounts['total_faculty'] ?? 0),
+        'total_courses' => (int)($deanCounts['total_courses'] ?? 0),
+        'total_subjects' => (int)($deanCounts['total_subjects'] ?? 0),
+        'active_coordinators' => (int)($deanCounts['active_coordinators'] ?? 0),
+        'total_exams' => (int)($deanCounts['total_exams'] ?? 0),
     ];
     // Per-course stats
     $dean_stats['courses'] = $pdo->query("
@@ -48,56 +57,76 @@ if ($faculty_role === 'dean') {
         $cname_stmt->execute([$cid]);
         $coord_course_name = $cname_stmt->fetchColumn();
         
+        $cStatsStmt = $pdo->prepare("
+            SELECT 
+                (SELECT COUNT(*) FROM students WHERE course = ?) as student_count,
+                (SELECT COUNT(DISTINCT faculty_id) FROM faculty_subjects WHERE course = ?) as faculty_count,
+                (SELECT COUNT(*) FROM subjects WHERE course = ?) as subject_count
+        ");
+        $cStatsStmt->execute([$coord_course_name, $coord_course_name, $coord_course_name]);
+        $csRow = $cStatsStmt->fetch(PDO::FETCH_ASSOC);
+        
         $coordinator_stats = [
             'course_id' => $cid,
             'course_name' => $coord_course_name,
-            'student_count' => $pdo->prepare("SELECT COUNT(*) FROM students WHERE course = ?")->execute([$coord_course_name]) ? $pdo->query("SELECT FOUND_ROWS()")->fetchColumn() : 0,
-            'faculty_count' => 0,
-            'subject_count' => 0,
+            'student_count' => (int)($csRow['student_count'] ?? 0),
+            'faculty_count' => (int)($csRow['faculty_count'] ?? 0),
+            'subject_count' => (int)($csRow['subject_count'] ?? 0),
         ];
-        // Re-query properly
-        $sc = $pdo->prepare("SELECT COUNT(*) FROM students WHERE course = ?");
-        $sc->execute([$coord_course_name]);
-        $coordinator_stats['student_count'] = $sc->fetchColumn();
-        
-        $fc = $pdo->prepare("SELECT COUNT(DISTINCT faculty_id) FROM faculty_subjects WHERE course = ?");
-        $fc->execute([$coord_course_name]);
-        $coordinator_stats['faculty_count'] = $fc->fetchColumn();
-        
-        $sbc = $pdo->prepare("SELECT COUNT(*) FROM subjects WHERE course = ?");
-        $sbc->execute([$coord_course_name]);
-        $coordinator_stats['subject_count'] = $sbc->fetchColumn();
     }
 }
 
-// Fetch real stats
-$my_subjects_count = $academicEngine->getFacultySubjectCount($faculty_id, $academicYear, $semesterType);
-$my_students_count = $academicEngine->getFacultyUniqueStudentCount($faculty_id, $academicYear, $semesterType);
-
-// My Classes count (Unique course+semester+division mapped to faculty)
+// Fetch faculty KPI stats in a single consolidated batch query
 $mod = ($semesterType === 'Odd') ? 1 : 0;
-$classStmt = $pdo->prepare("SELECT COUNT(DISTINCT course, semester, division) FROM faculty_subjects WHERE faculty_id = ? AND academic_year = ? AND (semester % 2) = ?");
-$classStmt->execute([$faculty_id, $academicYear, $mod]);
-$my_classes_count = $classStmt->fetchColumn();
-
-// 2. Study Materials
-$materialsStmt = $pdo->prepare("
-    SELECT COUNT(DISTINCT m.id) FROM study_materials m
-    JOIN faculty_subjects fs ON m.faculty_id = fs.faculty_id AND m.subject_id = fs.subject_id AND m.course = fs.course AND m.semester = fs.semester AND m.division = fs.division
-    WHERE m.faculty_id = ? AND fs.academic_year = ? AND m.semester % 2 = ?
+$kpiStmt = $pdo->prepare("
+    SELECT 
+        (SELECT COUNT(*) FROM faculty_subjects WHERE faculty_id = ? AND academic_year = ? AND (semester % 2) = ?) as my_subjects_count,
+        (SELECT COUNT(DISTINCT course, semester, division) FROM faculty_subjects WHERE faculty_id = ? AND academic_year = ? AND (semester % 2) = ?) as my_classes_count,
+        (SELECT COUNT(DISTINCT sae.student_id) 
+         FROM student_academic_enrollments sae
+         JOIN faculty_subjects fs 
+           ON sae.course = fs.course 
+          AND sae.semester = fs.semester 
+          AND sae.division = fs.division 
+          AND sae.academic_year = fs.academic_year
+         WHERE fs.faculty_id = ? 
+           AND fs.academic_year = ? 
+           AND (fs.semester % 2) = ?
+           AND sae.status = 'Active') as my_students_count,
+        (SELECT COUNT(DISTINCT m.id) 
+         FROM study_materials m
+         JOIN faculty_subjects fs 
+           ON m.faculty_id = fs.faculty_id 
+          AND m.subject_id = fs.subject_id 
+          AND m.course = fs.course 
+          AND m.semester = fs.semester 
+          AND m.division = fs.division
+         WHERE m.faculty_id = ? AND fs.academic_year = ? AND (m.semester % 2) = ?) as materials_count,
+        (SELECT COUNT(DISTINCT sub.id) 
+         FROM assignment_submissions sub
+         JOIN assignments a ON sub.assignment_id = a.id
+         JOIN faculty_subjects fs 
+           ON a.faculty_id = fs.faculty_id 
+          AND a.subject_id = fs.subject_id 
+          AND a.course = fs.course 
+          AND a.semester = fs.semester 
+          AND a.division = fs.division
+         WHERE a.faculty_id = ? AND sub.status != 'Graded' AND fs.academic_year = ? AND (a.semester % 2) = ?) as pending_submissions_count
 ");
-$materialsStmt->execute([$faculty_id, $academicYear, $mod]);
-$materials_count = $materialsStmt->fetchColumn();
+$kpiStmt->execute([
+    $faculty_id, $academicYear, $mod,
+    $faculty_id, $academicYear, $mod,
+    $faculty_id, $academicYear, $mod,
+    $faculty_id, $academicYear, $mod,
+    $faculty_id, $academicYear, $mod
+]);
+$kpiRow = $kpiStmt->fetch(PDO::FETCH_ASSOC);
 
-// 3. Pending Submissions
-$assignmentsStmt = $pdo->prepare("
-    SELECT COUNT(DISTINCT sub.id) FROM assignment_submissions sub
-    JOIN assignments a ON sub.assignment_id = a.id
-    JOIN faculty_subjects fs ON a.faculty_id = fs.faculty_id AND a.subject_id = fs.subject_id AND a.course = fs.course AND a.semester = fs.semester AND a.division = fs.division
-    WHERE a.faculty_id = ? AND sub.status != 'Graded' AND fs.academic_year = ? AND (a.semester % 2) = ?
-");
-$assignmentsStmt->execute([$faculty_id, $academicYear, $mod]);
-$pending_submissions_count = $assignmentsStmt->fetchColumn();
+$my_subjects_count = (int)($kpiRow['my_subjects_count'] ?? 0);
+$my_classes_count = (int)($kpiRow['my_classes_count'] ?? 0);
+$my_students_count = (int)($kpiRow['my_students_count'] ?? 0);
+$materials_count = (int)($kpiRow['materials_count'] ?? 0);
+$pending_submissions_count = (int)($kpiRow['pending_submissions_count'] ?? 0);
 
 // 4. Notifications
 $notifStmt = $pdo->prepare("SELECT COUNT(*) FROM notifications WHERE user_id = ? AND is_read = 0");

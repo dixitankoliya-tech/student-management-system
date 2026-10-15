@@ -4,12 +4,32 @@ require_once '../includes/student_auth.php';
 
 requireRole('student');
 
-if (!isset($_GET['id'])) {
-    die("Receipt ID not provided.");
+$student_id = $_SESSION['student_id'] ?? $_SESSION['user_id'];
+$id = (int)($_GET['id'] ?? $_GET['fee_id'] ?? 0);
+
+if (!$id) {
+    $stmt = $pdo->prepare("SELECT fp.id FROM fee_payments fp JOIN student_fees sf ON fp.student_fee_id = sf.id WHERE sf.student_id = ? ORDER BY fp.id DESC LIMIT 1");
+    $stmt->execute([$student_id]);
+    $id = (int)$stmt->fetchColumn();
 }
 
-$id = (int)$_GET['id'];
-$student_id = $_SESSION['user_id'];
+if (!$id) {
+    ?>
+    <!DOCTYPE html>
+    <html lang="en">
+    <head><meta charset="UTF-8"><title>Receipt</title><link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet"></head>
+    <body class="bg-light p-5 text-center">
+        <div class="card p-5 shadow-sm mx-auto" style="max-width: 500px;">
+            <i class="fas fa-file-invoice text-muted fa-3x mb-3"></i>
+            <h4>No Payment Receipt Found</h4>
+            <p class="text-muted">You have no recorded fee payments to generate a receipt for at this time.</p>
+            <a href="fees.php" class="btn btn-primary mt-2">Back to Fees</a>
+        </div>
+    </body>
+    </html>
+    <?php
+    exit();
+}
 
 $stmt = $pdo->prepare("
     SELECT fp.*, s.first_name, s.last_name, s.enrollment_no, s.course, s.semester as stu_sem, s.admission_year, 
@@ -24,7 +44,21 @@ $stmt->execute([$id, $student_id]);
 $receipt = $stmt->fetch();
 
 if (!$receipt) {
-    die("Receipt not found or unauthorized.");
+    ?>
+    <!DOCTYPE html>
+    <html lang="en">
+    <head><meta charset="UTF-8"><title>Receipt Not Found</title><link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet"></head>
+    <body class="bg-light p-5 text-center">
+        <div class="card p-5 shadow-sm mx-auto" style="max-width: 500px;">
+            <i class="fas fa-exclamation-triangle text-warning fa-3x mb-3"></i>
+            <h4>Receipt Not Found</h4>
+            <p class="text-muted">The requested payment receipt was not found or is unauthorized.</p>
+            <a href="fees.php" class="btn btn-primary mt-2">Back to Fees</a>
+        </div>
+    </body>
+    </html>
+    <?php
+    exit();
 }
 ?>
 <!DOCTYPE html>
@@ -100,8 +134,12 @@ if (!$receipt) {
             <div class="col-6">
                 <p class="mb-1"><strong>Amount in words:</strong></p>
                 <p class="text-muted fst-italic">Rupees <?php 
-                    $f = new NumberFormatter("en", NumberFormatter::SPELLOUT);
-                    echo ucwords($f->format($receipt['amount']));
+                    if (class_exists('NumberFormatter')) {
+                        $f = new NumberFormatter("en", NumberFormatter::SPELLOUT);
+                        echo ucwords($f->format($receipt['amount']));
+                    } else {
+                        echo number_format($receipt['amount'], 2);
+                    }
                 ?> Only</p>
                 
                 <?php if ($receipt['remarks']): ?>
